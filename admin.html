@@ -8,9 +8,12 @@
         body { font-family: -apple-system, sans-serif; background: #f4f7f6; padding: 20px; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         #admin-content { display: none; }
-        .report-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fafafa; }
-        button { padding: 10px 15px; border-radius: 6px; border: none; cursor: pointer; }
-        .btn-approve { background: #27ae60; color: white; width: 100%; margin-top: 10px; }
+        .report-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 8px; background: #fafafa; }
+        .report-img { max-width: 100%; height: auto; border-radius: 6px; margin-top: 10px; max-height: 250px; display: block; }
+        .actions { display: flex; gap: 10px; margin-top: 15px; }
+        button { padding: 10px 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-approve { background: #27ae60; color: white; flex: 1; }
+        .btn-delete { background: #e74c3c; color: white; flex: 1; }
     </style>
 </head>
 <body>
@@ -29,7 +32,7 @@
             <h1>Segnalazioni in attesa</h1>
             <div id="pending-list"></div>
             <br>
-            <button onclick="firebase.auth().signOut().then(() => location.reload())" style="background: #e74c3c; color: white;">Esci</button>
+            <button onclick="firebase.auth().signOut().then(() => location.reload())" style="background: #7f8c8d; color: white; width: 100%;">Esci</button>
         </div>
     </div>
 
@@ -41,7 +44,7 @@
     <script>
         // La tua configurazione Firebase ufficiale
         const firebaseConfig = {
-            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnv3E",
+            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnV3E",
             authDomain: "palermofix-9cae9.firebaseapp.com",
             projectId: "palermofix-9cae9",
             storageBucket: "palermofix-9cae9.firebasestorage.app",
@@ -79,10 +82,17 @@
 
                 snapshot.forEach(doc => {
                     const d = doc.data();
+                    // Mostra l'anteprima della foto se presente, altrimenti un messaggio di avviso
+                    const imgHtml = d.foto ? `<img src="${d.foto}" class="report-img">` : `<p style="color:#7f8c8d; font-size:13px;">Nessuna foto allegata.</p>`;
+                    
                     list.innerHTML += `
                         <div class="report-card">
                             <p><b>Descrizione:</b> ${d.descrizione || 'Nessuna descrizione'}</p>
-                            <button class="btn-approve" onclick="approve('${doc.id}')">Approva e pubblica</button>
+                            ${imgHtml}
+                            <div class="actions">
+                                <button class="btn-approve" onclick="approve('${doc.id}')">Approva</button>
+                                <button class="btn-delete" onclick="deleteReport('${doc.id}')">Elimina</button>
+                            </div>
                         </div>`;
                 });
             });
@@ -91,6 +101,13 @@
         function approve(id) {
             db.collection("segnalazioni").doc(id).update({ stato: "approvata" })
                 .catch(e => alert("Errore durante l'approvazione: " + e.message));
+        }
+
+        function deleteReport(id) {
+            if (confirm("Sei sicuro di voler eliminare definitivamente questa segnalazione?")) {
+                db.collection("segnalazioni").doc(id).delete()
+                    .catch(e => alert("Errore durante l'eliminazione: " + e.message));
+            }
         }
     </script>
 </body>
