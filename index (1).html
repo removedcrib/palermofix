@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Palermo Fix</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root { --primary: #e67e22; --dark: #2c3e50; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+        #map { height: 100vh; width: 100vw; z-index: 1; }
+        
+        #ui-overlay { position: absolute; bottom: 20px; left: 0; right: 0; z-index: 1000; padding: 0 20px; text-align: center; }
+        .btn-main { background: var(--primary); color: white; border: none; padding: 18px 30px; border-radius: 50px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 100%; max-width: 400px; transition: transform 0.2s; }
+        
+        /* Pannello a comparsa */
+        #report-panel { position: fixed; bottom: -100%; left: 0; right: 0; height: 80vh; background: white; border-radius: 20px 20px 0 0; z-index: 2000; transition: bottom 0.3s ease-out; padding: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); }
+        #report-panel.active { bottom: 0; }
+        
+        h2 { margin-top: 0; color: var(--dark); }
+        .form-group { margin-bottom: 20px; }
+        input[type="file"], textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+        .disclaimer { font-size: 11px; color: #7f8c8d; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <div id="ui-overlay">
+        <button class="btn-main" onclick="openPanel()">+ Nuova Segnalazione</button>
+    </div>
+
+    <div id="report-panel">
+        <h2>Segnala Degrado</h2>
+        <p class="disclaimer">⚠️ Evita volti o targhe. Le segnalazioni saranno verificate.</p>
+        <div class="form-group">
+            <input type="file" accept="image/*" capture="environment">
+        </div>
+        <div class="form-group">
+            <textarea placeholder="Descrizione breve..." rows="3"></textarea>
+        </div>
+        <button class="btn-main" onclick="closePanel()">Invia Segnalazione</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([38.1157, 13.3615], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+        function openPanel() { document.getElementById('report-panel').classList.add('active'); }
+        function closePanel() { document.getElementById('report-panel').classList.remove('active'); alert('Segnalazione inviata con successo!'); }
+    </script>
+</body>
+</html>
