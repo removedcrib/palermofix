@@ -3,27 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Palermo Fix</title>
+    <title>Palermo Fix - Segnalazioni Diffuse</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --primary: #e67e22; --dark: #2c3e50; }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, sans-serif; overflow: hidden; }
         #map { height: 100vh; width: 100vw; z-index: 1; }
         
         #ui-overlay { position: absolute; bottom: 20px; left: 0; right: 0; z-index: 1000; padding: 0 20px; text-align: center; }
-        .btn-main { background: var(--primary); color: white; border: none; padding: 18px 30px; border-radius: 50px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 100%; max-width: 400px; transition: transform 0.2s; cursor: pointer; }
+        .btn-main { background: var(--primary); color: white; border: none; padding: 18px 30px; border-radius: 50px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 100%; max-width: 400px; cursor: pointer; }
         
-        /* Pannello a comparsa */
-        #report-panel { position: fixed; bottom: -100%; left: 0; right: 0; height: 80vh; background: white; border-radius: 20px 20px 0 0; z-index: 2000; transition: bottom 0.3s ease-out; padding: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); box-sizing: border-box; }
+        #report-panel { position: fixed; bottom: -100%; left: 0; right: 0; height: 85vh; background: white; border-radius: 20px 20px 0 0; z-index: 2000; transition: bottom 0.3s ease-out; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         #report-panel.active { bottom: 0; }
         
-        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        h2 { margin: 0; color: var(--dark); }
-        .btn-close { background: none; border: none; font-size: 24px; color: #7f8c8d; cursor: pointer; padding: 0 5px; }
-
-        .form-group { margin-bottom: 20px; text-align: left; }
-        input[type="file"], textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; }
-        .disclaimer { font-size: 11px; color: #7f8c8d; margin-bottom: 15px; text-align: left; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn-secondary { background: #f39c12; color: white; border: none; padding: 10px; border-radius: 8px; margin: 5px 0; cursor: pointer; width: 100%; }
     </style>
 </head>
 <body>
@@ -36,15 +32,21 @@
 
     <div id="report-panel">
         <div class="panel-header">
-            <h2>Segnala Degrado</h2>
-            <button class="btn-close" onclick="closePanel()">&times;</button>
+            <h2>Nuova Segnalazione</h2>
+            <button onclick="closePanel()" style="background:none; border:none; font-size:20px;">&times;</button>
         </div>
-        <p class="disclaimer">⚠️ Evita volti o targhe. Le segnalazioni saranno verificate.</p>
+        
+        <div class="form-group">
+            <input type="text" id="address-input" placeholder="Indirizzo o luogo...">
+            <button class="btn-secondary" onclick="searchAddress()">Cerca sulla mappa</button>
+            <button class="btn-secondary" onclick="useGPS()">Usa la mia posizione GPS</button>
+        </div>
+        
         <div class="form-group">
             <input type="file" accept="image/*" capture="environment">
         </div>
         <div class="form-group">
-            <textarea placeholder="Descrizione breve..." rows="3"></textarea>
+            <textarea id="desc-input" placeholder="Descrizione..." rows="3"></textarea>
         </div>
         <button class="btn-main" onclick="submitReport()">Invia Segnalazione</button>
     </div>
@@ -54,17 +56,34 @@
         var map = L.map('map').setView([38.1157, 13.3615], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
-        function openPanel() { 
-            document.getElementById('report-panel').classList.add('active'); 
+        let marker;
+
+        function openPanel() { document.getElementById('report-panel').classList.add('active'); }
+        function closePanel() { document.getElementById('report-panel').classList.remove('active'); }
+
+        function setMarker(lat, lng) {
+            map.setView([lat, lng], 16);
+            if (marker) map.removeLayer(marker);
+            marker = L.marker([lat, lng], {draggable: true}).addTo(map);
+            marker.bindPopup("Posizione segnalazione").openPopup();
         }
-        
-        function closePanel() { 
-            document.getElementById('report-panel').classList.remove('active'); 
+
+        function useGPS() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => setMarker(pos.coords.latitude, pos.coords.longitude));
+            } else { alert("GPS non supportato."); }
+        }
+
+        function searchAddress() {
+            const query = document.getElementById('address-input').value;
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}, Palermo`)
+                .then(r => r.json())
+                .then(d => d.length > 0 ? setMarker(d[0].lat, d[0].lon) : alert("Indirizzo non trovato."));
         }
 
         function submitReport() {
+            alert('Segnalazione inviata! (Nota: per il salvataggio reale integrare Firebase)');
             closePanel();
-            alert('Segnalazione inviata con successo!');
         }
     </script>
 </body>
