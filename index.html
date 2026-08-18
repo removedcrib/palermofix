@@ -79,6 +79,24 @@
         let marker;
         let selectedCoords = null; // Memorizza le coordinate corrette del pin
 
+        // Funzione per caricare e mostrare sulla mappa solo le segnalazioni approvate
+        function loadApprovedMarkers() {
+            db.collection("segnalazioni").where("stato", "==", "approvata").get().then((querySnapshot) => {
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.lat && data.lng) {
+                        L.marker([data.lat, data.lng]).addTo(map)
+                          .bindPopup(`<b>Segnalazione</b><br>${data.descrizione || 'Nessuna descrizione'}`);
+                    }
+                });
+            }).catch((error) => {
+                console.error("Errore nel caricamento delle segnalazioni: ", error);
+            });
+        }
+
+        // Carica i marker all'avvio della pagina
+        loadApprovedMarkers();
+
         function openPanel() { document.getElementById('report-panel').classList.add('active'); }
         function closePanel() { document.getElementById('report-panel').classList.remove('active'); }
 
@@ -137,11 +155,11 @@
                     lat: selectedCoords.lat,
                     lng: selectedCoords.lng,
                     descrizione: description,
-                    stato: "aperta", // Stato iniziale della segnalazione
+                    stato: "aperta", // Stato iniziale (richiede approvazione da admin.html)
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                alert('Segnalazione inviata con successo!');
+                alert('Segnalazione inviata con successo! Sarà visibile sulla mappa dopo l\'approvazione.');
                 document.getElementById('desc-input').value = '';
                 document.getElementById('address-input').value = '';
                 if (marker) map.removeLayer(marker);
