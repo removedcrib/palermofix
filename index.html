@@ -33,7 +33,7 @@
     <div id="report-panel">
         <div class="panel-header">
             <h2>Nuova Segnalazione</h2>
-            <button onclick="closePanel()" style="background:none; border:none; font-size:20px;">&times;</button>
+            <button onclick="closePanel()" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
         </div>
         
         <div class="form-group">
@@ -148,13 +148,27 @@
             }
 
             const description = document.getElementById('desc-input').value;
+            const imageInput = document.getElementById('image-input');
+            
+            let imageDataUrl = "";
+
+            // Se l'utente ha caricato una foto, la convertiamo in Base64 per poterla salvare e visualizzare nell'admin
+            if (imageInput.files && imageInput.files[0]) {
+                const file = imageInput.files[0];
+                imageDataUrl = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+            }
             
             try {
-                // Salvataggio nel database Firestore nella collezione "segnalazioni"
+                // Salvataggio nel database Firestore nella collezione "segnalazioni" con la foto inclusa
                 await db.collection("segnalazioni").add({
                     lat: selectedCoords.lat,
                     lng: selectedCoords.lng,
                     descrizione: description,
+                    foto: imageDataUrl,
                     stato: "aperta", // Stato iniziale (richiede approvazione da admin.html)
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
@@ -162,6 +176,7 @@
                 alert('Segnalazione inviata con successo! Sarà visibile sulla mappa dopo l\'approvazione.');
                 document.getElementById('desc-input').value = '';
                 document.getElementById('address-input').value = '';
+                document.getElementById('image-input').value = '';
                 if (marker) map.removeLayer(marker);
                 selectedCoords = null;
                 closePanel();
