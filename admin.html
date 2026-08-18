@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Palermo Fix - Admin</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #f4f7f6; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #admin-content { display: none; }
+        .report-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fafafa; }
+        button { padding: 10px 15px; border-radius: 6px; border: none; cursor: pointer; }
+        .btn-approve { background: #27ae60; color: white; width: 100%; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- LOGIN -->
+        <div id="login-box">
+            <h1>Login Admin</h1>
+            <input type="email" id="email" placeholder="Email"><br><br>
+            <input type="password" id="pass" placeholder="Password"><br><br>
+            <button onclick="login()">Accedi</button>
+        </div>
+
+        <!-- PANNELLO -->
+        <div id="admin-content">
+            <h1>Segnalazioni in attesa</h1>
+            <div id="pending-list"></div>
+            <button onclick="firebase.auth().signOut().then(() => location.reload())">Esci</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnV3E",
+            authDomain: "palermofix-9cae9.firebaseapp.com",
+            projectId: "palermofix-9cae9",
+            storageBucket: "palermofix-9cae9.firebasestorage.app",
+            messagingSenderId: "308048759174",
+            appId: "1:308048759174:web:86d9f1773885a288b3c407"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        function login() {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('pass').value;
+            auth.signInWithEmailAndPassword(email, pass)
+                .then(() => {
+                    document.getElementById('login-box').style.display = 'none';
+                    document.getElementById('admin-content').style.display = 'block';
+                    loadReports();
+                })
+                .catch(e => alert("Login fallito: " + e.message));
+        }
+
+        function loadReports() {
+            db.collection("segnalazioni").where("stato", "==", "aperta").onSnapshot(snapshot => {
+                const list = document.getElementById('pending-list');
+                list.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    list.innerHTML += `
+                        <div class="report-card">
+                            <p>${d.descrizione}</p>
+                            <button class="btn-approve" onclick="approve('${doc.id}')">Approva</button>
+                        </div>`;
+                });
+            });
+        }
+
+        function approve(id) {
+            db.collection("segnalazioni").doc(id).update({ stato: "approvata" });
+        }
+    </script>
+</body>
+</html>
