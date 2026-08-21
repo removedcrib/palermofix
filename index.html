@@ -3,29 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Palermo Fix - Segnalazioni Diffuse</title>
+    <title>Palermo Fix - Segnalazioni Urbane</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --primary: #e67e22; --dark: #2c3e50; }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, sans-serif; overflow: hidden; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+        :root { 
+            --primary: #ff6b35; 
+            --primary-gradient: linear-gradient(135deg, #ff6b35 0%, #ff8e53 100%);
+            --secondary: #00b4d8;
+            --success: #2ec4b6;
+            --dark: #1d3557; 
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; background-color: #f0f4f8; }
         #map { height: 100vh; width: 100vw; z-index: 1; }
         
-        #ui-overlay { position: absolute; bottom: 30px; left: 0; right: 0; z-index: 1000; padding: 0 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .btn-main { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 50px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 100%; max-width: 400px; cursor: pointer; transition: transform 0.1s; }
-        .btn-main:active { transform: scale(0.98); }
-        .btn-alt { background: #27ae60; }
+        /* Floating UI Elements */
+        #ui-overlay { 
+            position: absolute; bottom: 35px; left: 0; right: 0; z-index: 1000; 
+            padding: 0 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; 
+            pointer-events: none;
+        }
+
+        .btn-main { 
+            background: var(--primary-gradient); color: white; border: none; 
+            padding: 16px 28px; border-radius: 20px; font-size: 16px; font-weight: 700; 
+            box-shadow: 0 10px 25px rgba(255, 107, 53, 0.4); width: 100%; max-width: 380px; 
+            cursor: pointer; transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            pointer-events: auto; display: flex; align-items: center; justify-content: center; gap: 8px;
+            letter-spacing: -0.3px;
+        }
+        .btn-main:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(255, 107, 53, 0.5); }
+        .btn-main:active { transform: translateY(1px); }
         
-        /* Pannello centrale fluttuante (ottimizzato sia per mobile che desktop) */
+        .btn-alt { 
+            background: linear-gradient(135deg, #2ec4b6 0%, #20b2aa 100%); 
+            box-shadow: 0 10px 25px rgba(46, 196, 182, 0.3); 
+        }
+        .btn-alt:hover { box-shadow: 0 15px 30px rgba(46, 196, 182, 0.4); }
+
+        /* Glassmorphism Slide Panel / Modal */
         .slide-panel { 
             position: fixed; 
             top: 50%; left: 50%; 
-            transform: translate(-50%, -50%) scale(0.95); 
-            width: 90%; max-width: 480px; max-height: 85vh; 
-            background: white; border-radius: 16px; 
+            transform: translate(-50%, -50%) scale(0.9); 
+            width: 90%; max-width: 440px; max-height: 85vh; 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px; 
             z-index: 2000; opacity: 0; pointer-events: none;
-            transition: all 0.25s ease-in-out; 
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
             padding: 24px; box-sizing: border-box; overflow-y: auto; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
         }
         .slide-panel.active { 
             transform: translate(-50%, -50%) scale(1); 
@@ -34,41 +68,67 @@
         }
         
         .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .panel-header h2 { font-size: 20px; color: var(--dark); margin: 0; }
-        .form-group { margin-bottom: 16px; position: relative; }
-        input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
-        input:focus, textarea:focus { outline: none; border-color: var(--primary); }
-        .btn-secondary { background: #f39c12; color: white; border: none; padding: 10px; border-radius: 8px; margin-top: 8px; cursor: pointer; width: 100%; font-weight: 600; }
-        
-        .privacy-note { font-size: 12px; color: #e74c3c; margin-top: 6px; line-height: 1.3; }
-        .hint-text { font-size: 12px; color: #666; margin-top: 6px; }
-
-        /* Stile per i suggerimenti indirizzo (Autocomplete) */
-        #suggestions-list {
-            position: absolute; top: 100%; left: 0; right: 0; background: white;
-            border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px;
-            max-height: 160px; overflow-y: auto; z-index: 2100; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            text-align: left; display: none;
+        .panel-header h2 { font-size: 22px; font-weight: 800; color: var(--dark); margin: 0; letter-spacing: -0.5px; }
+        .close-btn { 
+            background: rgba(0,0,0,0.05); border: none; width: 36px; height: 36px; border-radius: 50%;
+            font-size: 18px; cursor: pointer; color: var(--dark); display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
         }
-        .suggestion-item { padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f1f1f1; color: #333; }
-        .suggestion-item:hover { background: #f8f9fa; }
+        .close-btn:hover { background: rgba(0,0,0,0.1); }
 
-        /* Stile moderno per popup mappa */
-        .custom-popup img { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-top: 8px; cursor: zoom-in; }
-        .custom-popup p { margin: 5px 0 0 0; font-size: 14px; color: #444; }
+        .form-group { margin-bottom: 16px; position: relative; }
+        input, textarea { 
+            width: 100%; padding: 14px 16px; border: 2px solid rgba(0,0,0,0.06); 
+            border-radius: 14px; box-sizing: border-box; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif;
+            background: rgba(255, 255, 255, 0.9); color: var(--dark); transition: all 0.2s;
+        }
+        input:focus, textarea:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1); }
+        
+        .btn-secondary { 
+            background: rgba(255, 107, 53, 0.1); color: var(--primary); border: none; 
+            padding: 12px; border-radius: 12px; margin-top: 8px; cursor: pointer; width: 100%; 
+            font-weight: 700; font-size: 13px; transition: background 0.2s;
+        }
+        .btn-secondary:hover { background: rgba(255, 107, 53, 0.18); }
+        
+        .privacy-note { font-size: 11px; color: #e76f51; margin-top: 6px; line-height: 1.4; font-weight: 500; }
+        .hint-text { font-size: 11px; color: #6c757d; margin-top: 6px; line-height: 1.4; }
 
-        /* Overlay Fullscreen per lo Zoom delle Foto */
-        #photo-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; display: none; justify-content: center; align-items: center; cursor: zoom-out; }
-        #photo-overlay img { max-width: 95%; max-height: 95%; border-radius: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); }
+        /* Autocomplete suggestions */
+        #suggestions-list {
+            position: absolute; top: 100%; left: 0; right: 0; background: #fff;
+            border-radius: 0 0 14px 14px;
+            max-height: 160px; overflow-y: auto; z-index: 2100; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: left; display: none; margin-top: 4px; border: 1px solid rgba(0,0,0,0.05);
+        }
+        .suggestion-item { padding: 12px 16px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f8f9fa; color: var(--dark); font-weight: 500; }
+        .suggestion-item:hover { background: #fff3ed; color: var(--primary); }
 
-        /* Modal personalizzato per mostrare il codice di chiusura */
-        #code-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9998; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
-        .modal-content { background: white; padding: 25px; border-radius: 12px; max-width: 350px; width: 100%; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
-        .modal-content h3 { margin-top: 0; color: var(--dark); }
-        .code-box { background: #f8f9fa; border: 2px dashed var(--primary); padding: 12px; font-size: 22px; font-weight: bold; letter-spacing: 2px; color: var(--primary); margin: 15px 0; border-radius: 8px; user-select: all; }
+        /* Custom Popup Map */
+        .leaflet-popup-content-wrapper { border-radius: 16px; padding: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .custom-popup img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 10px; margin-top: 8px; cursor: zoom-in; }
+        .custom-popup b { color: var(--dark); font-size: 14px; }
+        .custom-popup p { margin: 6px 0 0 0; font-size: 13px; color: #555; }
 
-        /* Toast Notification */
-        #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.85); color: white; padding: 12px 24px; border-radius: 30px; z-index: 3000; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        /* Zoom Overlay */
+        #photo-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; display: none; justify-content: center; align-items: center; cursor: zoom-out; }
+        #photo-overlay img { max-width: 92%; max-height: 92%; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+
+        /* Modal Codice */
+        #code-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 9998; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .modal-content { background: #fff; padding: 30px 24px; border-radius: 28px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
+        .modal-content h3 { margin-top: 0; color: var(--dark); font-size: 20px; font-weight: 800; }
+        .code-box { background: #fff3ed; border: 2px dashed var(--primary); padding: 14px; font-size: 24px; font-weight: 800; letter-spacing: 3px; color: var(--primary); margin: 20px 0; border-radius: 14px; user-select: all; }
+
+        /* Toast Notification Modern */
+        #toast { 
+            position: fixed; top: 25px; left: 50%; transform: translateX(-50%) translateY(-100px); 
+            background: var(--dark); color: white; padding: 12px 24px; border-radius: 50px; 
+            z-index: 3000; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            pointer-events: none; font-size: 14px; font-weight: 600; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
     </style>
 </head>
 <body>
@@ -76,60 +136,58 @@
     <div id="map"></div>
     <div id="toast"></div>
 
-    <!-- Overlay Fullscreen per lo Zoom -->
     <div id="photo-overlay" onclick="closeZoom()">
         <img id="zoomed-img" src="">
     </div>
 
-    <!-- Modale Codice di Chiusura/Invio -->
     <div id="code-modal">
         <div class="modal-content">
-            <h3>Segnalazione Inviata!</h3>
-            <p style="font-size: 14px; color: #666;">La tua segnalazione è in attesa di moderazione. Conserve questo codice segreto per poterla chiudere in futuro:</p>
+            <h3>Segnalazione Inviata! 🚀</h3>
+            <p style="font-size: 13px; color: #666; line-height: 1.5;">Conserva questo codice segreto per poter chiudere la segnalazione quando il problema sarà risolto:</p>
             <div class="code-box" id="display-closure-code">------</div>
-            <button class="btn-main" style="padding: 12px; font-size: 15px; width: 100%; max-width: none;" onclick="closeCodeModal()">Ho capito e salvato</button>
+            <button class="btn-main" style="width: 100%; max-width: none; padding: 14px;" onclick="closeCodeModal()">Ho salvato il codice</button>
         </div>
     </div>
 
     <div id="ui-overlay">
-        <button class="btn-main" onclick="openPanel('report-panel')">+ Nuova Segnalazione</button>
-        <button class="btn-main btn-alt" onclick="openPanel('close-panel')">✔️ Risolvi Segnalazione con Codice</button>
+        <button class="btn-main" onclick="openPanel('report-panel')">✨ Nuova Segnalazione</button>
+        <button class="btn-main btn-alt" onclick="openPanel('close-panel')">✔️ Risolvi con Codice</button>
     </div>
 
     <!-- Pannello Nuova Segnalazione -->
     <div id="report-panel" class="slide-panel">
         <div class="panel-header">
             <h2>Nuova Segnalazione</h2>
-            <button onclick="closePanel('report-panel')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#666;">&times;</button>
+            <button class="close-btn" onclick="closePanel('report-panel')">&times;</button>
         </div>
         
         <div class="form-group">
             <input type="text" id="address-input" placeholder="Cerca via o civico (es. Via Roma 15)..." autocomplete="off">
             <div id="suggestions-list"></div>
-            <button class="btn-secondary" onclick="useGPS()">Usa la mia posizione GPS</button>
-            <div class="hint-text">💡 Seleziona l'indirizzo: la finestra si chiuderà automaticamente per permetterti di posizionare o trascinare il pin sulla mappa.</div>
+            <button class="btn-secondary" onclick="useGPS()">📍 Usa la mia posizione GPS</button>
+            <div class="hint-text">💡 Seleziona l'indirizzo: la finestra si chiuderà per permetterti di posizionare o trascinare il pin.</div>
         </div>
         
         <div class="form-group">
             <input type="file" id="image-input" accept="image/*" capture="environment">
-            <div class="privacy-note">⚠️ Attenzione: non includere persone o targhe di veicoli nelle foto.</div>
+            <div class="privacy-note">⚠️ Nota: Evita di includere volti di persone o targhe di veicoli nelle foto.</div>
         </div>
         
         <div class="form-group">
-            <textarea id="desc-input" placeholder="Descrizione del problema..." rows="3"></textarea>
+            <textarea id="desc-input" placeholder="Descrivi il problema (es. buca profonda, rifiuti)..." rows="3"></textarea>
         </div>
-        <button class="btn-main" onclick="submitReport()" style="width:100%; max-width:none;">Invia Segnalazione</button>
+        <button class="btn-main" onclick="submitReport()" style="width:100%; max-width:none; margin-top: 4px;">Invia Segnalazione</button>
     </div>
 
-    <!-- Pannello Chiusura Segnalazione -->
+    <!-- Pannello Chiusura -->
     <div id="close-panel" class="slide-panel">
         <div class="panel-header">
-            <h2>Chiudi Segnalazione</h2>
-            <button onclick="closePanel('close-panel')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#666;">&times;</button>
+            <h2>Risolvi Segnalazione</h2>
+            <button class="close-btn" onclick="closePanel('close-panel')">&times;</button>
         </div>
-        <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Inserisci il codice segreto ricevuto alla creazione per rimuovere la segnalazione.</p>
+        <p style="font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.5;">Inserisci il codice segreto che ti è stato fornito alla creazione per rimuovere la segnalazione.</p>
         <div class="form-group">
-            <input type="text" id="closure-code-input" placeholder="Inserisci codice (es. A1B2C3)" style="text-transform: uppercase;">
+            <input type="text" id="closure-code-input" placeholder="Codice segreto (es. A1B2C3)" style="text-transform: uppercase; text-align: center; font-weight: 700; letter-spacing: 1px;">
         </div>
         <button class="btn-main btn-alt" onclick="resolveReportByCode()" style="width:100%; max-width:none;">Conferma e Risolvi</button>
     </div>
@@ -151,7 +209,8 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        var map = L.map('map').setView([38.1157, 13.3615], 14);
+        var map = L.map('map', { zoomControl: false }).setView([38.1157, 13.3615], 14);
+        L.control.zoom({ position: 'topright' }).addTo(map);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
         let marker;
@@ -161,8 +220,8 @@
         function showToast(msg) {
             const t = document.getElementById('toast');
             t.innerText = msg;
-            t.style.opacity = 1;
-            setTimeout(() => { t.style.opacity = 0; }, 3000);
+            t.classList.add('show');
+            setTimeout(() => { t.classList.remove('show'); }, 3000);
         }
 
         function zoomImage(src) {
@@ -192,7 +251,7 @@
                     if (stato !== "chiusa" && stato !== "in_attesa" && data.lat && data.lng) {
                         const content = `
                             <div class="custom-popup">
-                                <b>Segnalazione</b>
+                                <b>Segnalazione Urbana</b>
                                 <p>${data.descrizione || 'Nessuna descrizione'}</p>
                                 ${data.foto ? `<img src="${data.foto}" onclick="zoomImage('${data.foto}')" title="Clicca per ingrandire">` : ''}
                             </div>
@@ -255,9 +314,8 @@
                 selectedCoords = { lat: pos.lat, lng: pos.lng };
             });
 
-            // Chiude la modale per lasciare interamente visibile la mappa e permettere il trascinamento del pin
             closePanel('report-panel');
-            showToast("Indirizzo impostato! Puoi spostare il pin sulla mappa.");
+            showToast("Pin posizionato! Trascinalo se necessario.");
         }
 
         function useGPS() {
