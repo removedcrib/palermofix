@@ -72,9 +72,19 @@
 
         #ui-overlay { 
             position: absolute; bottom: 35px; left: 0; right: 0; z-index: 1000; 
-            padding: 0 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; 
+            padding: 0 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; 
             pointer-events: none;
         }
+
+        /* Credits Tag Fluttuante in Home */
+        .credits-tag {
+            background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border); padding: 6px 14px; border-radius: 30px;
+            font-size: 11px; color: #555; font-weight: 600; cursor: pointer; pointer-events: auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06); transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+        }
+        .credits-tag:hover { background: white; transform: translateY(-1px); color: var(--dark); }
+        .credits-tag b { letter-spacing: 1px; color: var(--dark); }
 
         .btn-main { 
             background: var(--primary-gradient); color: white; border: none; 
@@ -228,7 +238,11 @@
         </div>
     </div>
 
+    <!-- UI Overlay Inferiore con Badge Firma -->
     <div id="ui-overlay">
+        <div class="credits-tag" onclick="openPanel('privacy-modal')">
+            <span>✨ Progetto by</span> <b>A.N.O.N.</b>
+        </div>
         <button class="btn-main" onclick="openPanel('report-panel')">✨ Nuova Segnalazione Rifiuti</button>
         <button class="btn-main btn-alt" onclick="openPanel('close-panel')">✔️ Risolvi con Codice</button>
     </div>
@@ -335,7 +349,7 @@
             <div style="text-align: center; padding: 5px 0 10px 0;">
                 <p style="font-size: 11px; color: #777; font-style: italic; margin-bottom: 6px;">Progetto sviluppato da</p>
                 <h3 style="font-size: 20px; font-weight: 800; letter-spacing: 3px; margin: 0; line-height: 1;">
-                    <span style="color: #000000;">A.N.</span><span style="color: #FF66CC; text-shadow: 0 0 1px rgba(0,0,0,0.1);">O.N.</span>
+                    <span style="color: #1d3557;">A.N.</span><span style="color: #ff6b35;">O.N.</span>
                 </h3>
                 <p style="font-size: 10px; color: #aaa; margin: 6px 0 10px 0;">© 2026</p>
                 <a href="mailto:hi@palermofix.it" style="display: inline-block; color: var(--primary); font-size: 12px; font-weight: 700; text-decoration: none; border: 1.5px solid var(--primary); padding: 5px 14px; border-radius: 20px; background: rgba(255, 107, 53, 0.04);">
@@ -488,7 +502,6 @@
                     }
                 });
 
-                // Aggiorna il contatore nella Top Bar
                 document.getElementById('active-count-badge').innerText = activeCount + (activeCount === 1 ? ' attiva in zona' : ' attive in zona');
             }).catch((error) => {
                 console.error("Errore nel caricamento: ", error);
