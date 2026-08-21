@@ -10,11 +10,12 @@
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, sans-serif; overflow: hidden; }
         #map { height: 100vh; width: 100vw; z-index: 1; }
         
-        #ui-overlay { position: absolute; bottom: 20px; left: 0; right: 0; z-index: 1000; padding: 0 20px; text-align: center; }
-        .btn-main { background: var(--primary); color: white; border: none; padding: 18px 30px; border-radius: 50px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 100%; max-width: 400px; cursor: pointer; }
+        #ui-overlay { position: absolute; bottom: 20px; left: 0; right: 0; z-index: 1000; padding: 0 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .btn-main { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 50px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 100%; max-width: 400px; cursor: pointer; }
+        .btn-alt { background: #27ae60; }
         
-        #report-panel { position: fixed; bottom: -100%; left: 0; right: 0; height: 85vh; background: white; border-radius: 20px 20px 0 0; z-index: 2000; transition: bottom 0.3s ease-out; padding: 20px; box-sizing: border-box; overflow-y: auto; }
-        #report-panel.active { bottom: 0; }
+        .slide-panel { position: fixed; bottom: -100%; left: 0; right: 0; height: 85vh; background: white; border-radius: 20px 20px 0 0; z-index: 2000; transition: bottom 0.3s ease-out; padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        .slide-panel.active { bottom: 0; }
         
         .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .form-group { margin-bottom: 15px; position: relative; }
@@ -36,9 +37,6 @@
         /* Stile moderno per popup mappa */
         .custom-popup img { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-top: 8px; cursor: zoom-in; }
         .custom-popup p { margin: 5px 0 0 0; font-size: 14px; color: #444; }
-        .close-section { margin-top: 10px; border-top: 1px dashed #ddd; padding-top: 8px; }
-        .close-section input { padding: 6px; font-size: 12px; margin-bottom: 5px; }
-        .close-section button { background: #27ae60; color: white; border: none; padding: 6px; border-radius: 4px; font-size: 12px; cursor: pointer; width: 100%; }
 
         /* Overlay Fullscreen per lo Zoom delle Foto */
         #photo-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; display: none; justify-content: center; align-items: center; cursor: zoom-out; }
@@ -75,13 +73,15 @@
     </div>
 
     <div id="ui-overlay">
-        <button class="btn-main" onclick="openPanel()">+ Nuova Segnalazione</button>
+        <button class="btn-main" onclick="openPanel('report-panel')">+ Nuova Segnalazione</button>
+        <button class="btn-main btn-alt" onclick="openPanel('close-panel')">✔️ Risolvi Segnalazione con Codice</button>
     </div>
 
-    <div id="report-panel">
+    <!-- Pannello Nuova Segnalazione -->
+    <div id="report-panel" class="slide-panel">
         <div class="panel-header">
             <h2>Nuova Segnalazione</h2>
-            <button onclick="closePanel()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#666;">&times;</button>
+            <button onclick="closePanel('report-panel')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#666;">&times;</button>
         </div>
         
         <div class="form-group">
@@ -98,7 +98,20 @@
         <div class="form-group">
             <textarea id="desc-input" placeholder="Descrizione..." rows="3"></textarea>
         </div>
-        <button class="btn-main" onclick="submitReport()">Invia Segnalazione</button>
+        <button class="btn-main" onclick="submitReport()" style="width:100%; max-width:none;">Invia Segnalazione</button>
+    </div>
+
+    <!-- Pannello Chiusura Segnalazione -->
+    <div id="close-panel" class="slide-panel">
+        <div class="panel-header">
+            <h2>Chiudi Segnalazione</h2>
+            <button onclick="closePanel('close-panel')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#666;">&times;</button>
+        </div>
+        <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Inserisci il codice segreto che ti è stato fornito al momento della creazione per rimuovere la segnalazione dalla mappa.</p>
+        <div class="form-group">
+            <input type="text" id="closure-code-input" placeholder="Inserisci codice (es. A1B2C3)" style="text-transform: uppercase;">
+        </div>
+        <button class="btn-main btn-alt" onclick="resolveReportByCode()" style="width:100%; max-width:none;">Conferma e Risolvi</button>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -154,17 +167,12 @@
             db.collection("segnalazioni").where("stato", "==", "aperta").get().then((querySnapshot) => {
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    const docId = doc.id;
                     if (data.lat && data.lng) {
                         const content = `
                             <div class="custom-popup">
                                 <b>Segnalazione Aperta</b>
                                 <p>${data.descrizione || 'Nessuna descrizione'}</p>
                                 ${data.foto ? `<img src="${data.foto}" onclick="zoomImage('${data.foto}')" title="Clicca per ingrandire">` : ''}
-                                <div class="close-section">
-                                    <input type="text" id="code-${docId}" placeholder="Codice chiusura...">
-                                    <button onclick="closeReport('${docId}')">Risolvi / Chiudi</button>
-                                </div>
                             </div>
                         `;
                         L.marker([data.lat, data.lng]).addTo(markersLayer).bindPopup(content);
@@ -175,32 +183,43 @@
 
         loadMarkers();
 
-        function closeReport(docId) {
-            const inputCode = document.getElementById(`code-${docId}`).value.trim().toUpperCase();
+        async function resolveReportByCode() {
+            const inputCode = document.getElementById('closure-code-input').value.trim().toUpperCase();
             if (!inputCode) {
-                showToast("Inserisci il codice di chiusura.");
+                showToast("Inserisci un codice valido.");
                 return;
             }
 
-            db.collection("segnalazioni").doc(docId).get().then((doc) => {
-                if (doc.exists) {
-                    const data = doc.data();
-                    if (data.codiceChiusura === inputCode) {
-                        db.collection("segnalazioni").doc(docId).update({ stato: "chiusa" })
-                            .then(() => {
-                                showToast("Segnalazione chiusa con successo!");
-                                map.closePopup();
-                                loadMarkers();
-                            });
-                    } else {
-                        showToast("Codice errato!");
-                    }
+            try {
+                const snapshot = await db.collection("segnalazioni").where("codiceChiusura", "==", inputCode).where("stato", "==", "aperta").get();
+                
+                if (snapshot.empty) {
+                    showToast("Codice non valido o segnalazione già chiusa.");
+                    return;
                 }
-            });
+
+                // Prendi il primo documento corrispondente e chiudilo
+                const docId = snapshot.docs[0].id;
+                await db.collection("segnalazioni").doc(docId).update({ stato: "chiusa" });
+
+                showToast("Segnalazione risolta con successo!");
+                document.getElementById('closure-code-input').value = '';
+                closePanel('close-panel');
+                loadMarkers();
+            } catch (error) {
+                console.error("Errore durante la chiusura: ", error);
+                showToast("Errore durante l'operazione.");
+            }
         }
 
-        function openPanel() { document.getElementById('report-panel').classList.add('active'); }
-        function closePanel() { document.getElementById('report-panel').classList.remove('active'); }
+        function openPanel(panelId) { 
+            document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active'); 
+        }
+        
+        function closePanel(panelId) { 
+            document.getElementById(panelId).classList.remove('active'); 
+        }
 
         function setMarker(lat, lng) {
             map.setView([lat, lng], 16);
@@ -317,17 +336,15 @@
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                // Mostra il modale con il codice segreto
                 document.getElementById('display-closure-code').innerText = closureCode;
                 document.getElementById('code-modal').style.display = 'flex';
 
-                // Pulisci il form
                 document.getElementById('desc-input').value = '';
                 document.getElementById('image-input').value = '';
                 addressInput.value = '';
                 if (marker) map.removeLayer(marker);
                 selectedCoords = null;
-                closePanel();
+                closePanel('report-panel');
                 loadMarkers();
             } catch (error) {
                 console.error("Errore durante il salvataggio: ", error);
