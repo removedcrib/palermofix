@@ -17,9 +17,19 @@
         #report-panel.active { bottom: 0; }
         
         .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .form-group { margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; position: relative; }
         input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        .btn-secondary { background: #f39c12; color: white; border: none; padding: 10px; border-radius: 8px; margin: 5px 0; cursor: pointer; width: 100%; }
+        .btn-secondary { background: #f39c12; color: white; border: none; padding: 10px; border-radius: 8px; margin-top: 5px; cursor: pointer; width: 100%; }
+
+        /* Stile per i suggerimenti indirizzo (Autocomplete) */
+        #suggestions-list {
+            position: absolute; top: 100%; left: 0; right: 0; background: white;
+            border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px;
+            max-height: 150px; overflow-y: auto; z-index: 2100; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: left; display: none;
+        }
+        .suggestion-item { padding: 10px 12px; font-size: 14px; cursor: pointer; border-bottom: 1px solid #f1f1f1; color: #333; }
+        .suggestion-item:hover { background: #f8f9fa; }
 
         /* Stile moderno per popup mappa */
         .custom-popup img { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-top: 8px; cursor: zoom-in; }
@@ -54,8 +64,8 @@
         </div>
         
         <div class="form-group">
-            <input type="text" id="address-input" placeholder="Indirizzo o luogo...">
-            <button class="btn-secondary" onclick="searchAddress()">Cerca sulla mappa</button>
+            <input type="text" id="address-input" placeholder="Scrivi l'indirizzo a Palermo..." autocomplete="off">
+            <div id="suggestions-list"></div>
             <button class="btn-secondary" onclick="useGPS()">Usa la mia posizione GPS</button>
         </div>
         
@@ -153,13 +163,52 @@
             }
         }
 
-        function searchAddress() {
-            const query = document.getElementById('address-input').value;
-            if(!query) return;
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Palermo`)
-                .then(r => r.json())
-                .then(d => { if(d.length > 0) setMarker(parseFloat(d[0].lat), parseFloat(d[0].lon)); else showToast("Indirizzo non trovato."); });
-        }
+        // Logica Autocomplete Indirizzi
+        let searchTimeout;
+        const addressInput = document.getElementById('address-input');
+        const suggestionsList = document.getElementById('suggestions-list');
+
+        addressInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+
+            if (query.length < 3) {
+                suggestionsList.style.display = 'none';
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Palermo`)
+                    .then(r => r.json())
+                    .then(data => {
+                        suggestionsList.innerHTML = '';
+                        if (data.length > 0) {
+                            suggestionsList.style.display = 'block';
+                            data.forEach(item => {
+                                const div = document.createElement('div');
+                                div.className = 'suggestion-item';
+                                div.innerText = item.display_name;
+                                div.onclick = () => {
+                                    addressInput.value = item.display_name;
+                                    suggestionsList.style.display = 'none';
+                                    setMarker(parseFloat(item.lat), parseFloat(item.lon));
+                                };
+                                suggestionsList.append(div);
+                            });
+                        } else {
+                            suggestionsList.style.display = 'none';
+                        }
+                    })
+                    .catch(() => { suggestionsList.style.display = 'none'; });
+            }, 300);
+        });
+
+        // Chiude la lista se si clicca fuori
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.form-group')) {
+                suggestionsList.style.display = 'none';
+            }
+        });
 
         async function submitReport() {
             if (!selectedCoords) { showToast("Seleziona una posizione sulla mappa!"); return; }
@@ -210,7 +259,7 @@
                 showToast('Segnalazione inviata con successo!');
                 document.getElementById('desc-input').value = '';
                 document.getElementById('image-input').value = '';
-                document.getElementById('address-input').value = '';
+                addressInput.value = '';
                 if (marker) map.removeLayer(marker);
                 selectedCoords = null;
                 closePanel();
