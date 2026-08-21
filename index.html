@@ -39,42 +39,79 @@
         .btn-main:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(255, 107, 53, 0.5); }
         .btn-main:active { transform: translateY(1px); }
         
-        .btn-alt { background: linear-gradient(135deg, #2ec4b6 0%, #20b2aa 100%); box-shadow: 0 10px 25px rgba(46, 196, 182, 0.3); }
+        .btn-alt { 
+            background: linear-gradient(135deg, #2ec4b6 0%, #20b2aa 100%); 
+            box-shadow: 0 10px 25px rgba(46, 196, 182, 0.3); 
+        }
+        .btn-alt:hover { box-shadow: 0 15px 30px rgba(46, 196, 182, 0.4); }
 
         .slide-panel { 
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); 
-            width: 90%; max-width: 440px; max-height: 85vh; background: var(--glass-bg); 
-            backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: 28px; 
-            z-index: 2000; opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
-            padding: 24px; box-sizing: border-box; overflow-y: auto; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            position: fixed; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%) scale(0.9); 
+            width: 90%; max-width: 440px; max-height: 85vh; 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px; 
+            z-index: 2000; opacity: 0; pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
+            padding: 24px; box-sizing: border-box; overflow-y: auto; 
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
         }
-        .slide-panel.active { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
+        .slide-panel.active { 
+            transform: translate(-50%, -50%) scale(1); 
+            opacity: 1; 
+            pointer-events: auto; 
+        }
         
         .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .panel-header h2 { font-size: 22px; font-weight: 800; color: var(--dark); margin: 0; }
-        .close-btn { background: rgba(0,0,0,0.05); border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; color: var(--dark); display: flex; align-items: center; justify-content: center; }
+        .panel-header h2 { font-size: 22px; font-weight: 800; color: var(--dark); margin: 0; letter-spacing: -0.5px; }
+        .close-btn { 
+            background: rgba(0,0,0,0.05); border: none; width: 36px; height: 36px; border-radius: 50%;
+            font-size: 18px; cursor: pointer; color: var(--dark); display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .close-btn:hover { background: rgba(0,0,0,0.1); }
 
         .form-group { margin-bottom: 16px; position: relative; }
-        input, textarea, select { 
+        input, textarea { 
             width: 100%; padding: 14px 16px; border: 2px solid rgba(0,0,0,0.06); 
             border-radius: 14px; box-sizing: border-box; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif;
-            background: rgba(255, 255, 255, 0.9); color: var(--dark);
+            background: rgba(255, 255, 255, 0.9); color: var(--dark); transition: all 0.2s;
         }
+        input:focus, textarea:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1); }
         
-        .btn-secondary { background: rgba(255, 107, 53, 0.1); color: var(--primary); border: none; padding: 12px; border-radius: 12px; margin-top: 8px; cursor: pointer; width: 100%; font-weight: 700; font-size: 13px; }
+        .btn-secondary { 
+            background: rgba(255, 107, 53, 0.1); color: var(--primary); border: none; 
+            padding: 12px; border-radius: 12px; margin-top: 8px; cursor: pointer; width: 100%; 
+            font-weight: 700; font-size: 13px; transition: background 0.2s;
+        }
+        .btn-secondary:hover { background: rgba(255, 107, 53, 0.18); }
         
-        .leaflet-popup-content-wrapper { border-radius: 16px; padding: 4px; }
-        .custom-popup b { color: var(--primary); font-size: 15px; display: block; margin-bottom: 4px; }
+        .privacy-note { font-size: 11px; color: #e76f51; margin-top: 6px; line-height: 1.4; font-weight: 500; }
+        .hint-text { font-size: 11px; color: #6c757d; margin-top: 6px; line-height: 1.4; }
+
+        .leaflet-popup-content-wrapper { border-radius: 16px; padding: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
         .custom-popup img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 10px; margin-top: 8px; cursor: zoom-in; }
-        
+        .custom-popup b { color: var(--dark); font-size: 14px; }
+        .custom-popup p { margin: 6px 0 0 0; font-size: 13px; color: #555; }
+
         #photo-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; display: none; justify-content: center; align-items: center; cursor: zoom-out; }
-        #photo-overlay img { max-width: 92%; max-height: 92%; border-radius: 16px; }
+        #photo-overlay img { max-width: 92%; max-height: 92%; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
 
-        #code-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 9998; display: none; justify-content: center; align-items: center; padding: 20px; }
-        .modal-content { background: #fff; padding: 30px 24px; border-radius: 28px; max-width: 360px; width: 100%; text-align: center; }
-        .code-box { background: #fff3ed; border: 2px dashed var(--primary); padding: 14px; font-size: 24px; font-weight: 800; color: var(--primary); margin: 20px 0; border-radius: 14px; }
+        #code-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 9998; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .modal-content { background: #fff; padding: 30px 24px; border-radius: 28px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
+        .modal-content h3 { margin-top: 0; color: var(--dark); font-size: 20px; font-weight: 800; }
+        .code-box { background: #fff3ed; border: 2px dashed var(--primary); padding: 14px; font-size: 24px; font-weight: 800; letter-spacing: 3px; color: var(--primary); margin: 20px 0; border-radius: 14px; user-select: all; }
 
-        #toast { position: fixed; top: 25px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--dark); color: white; padding: 12px 24px; border-radius: 50px; z-index: 3000; opacity: 0; transition: all 0.3s; pointer-events: none; font-size: 14px; font-weight: 600; }
+        #toast { 
+            position: fixed; top: 25px; left: 50%; transform: translateX(-50%) translateY(-100px); 
+            background: var(--dark); color: white; padding: 12px 24px; border-radius: 50px; 
+            z-index: 3000; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            pointer-events: none; font-size: 14px; font-weight: 600; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+        }
         #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
     </style>
 </head>
@@ -90,9 +127,9 @@
     <div id="code-modal">
         <div class="modal-content">
             <h3>Segnalazione Inviata! 🚀</h3>
-            <p>Conserva questo codice per chiudere la segnalazione:</p>
+            <p style="font-size: 13px; color: #666; line-height: 1.5;">Conserva questo codice segreto per poter chiudere la segnalazione quando il problema sarà risolto:</p>
             <div class="code-box" id="display-closure-code">------</div>
-            <button class="btn-main" style="width: 100%; padding: 14px;" onclick="closeCodeModal()">Ho salvato il codice</button>
+            <button class="btn-main" style="width: 100%; max-width: none; padding: 14px;" onclick="closeCodeModal()">Ho salvato il codice</button>
         </div>
     </div>
 
@@ -110,32 +147,22 @@
         
         <div class="form-group">
             <div style="display: flex; gap: 8px;">
-                <input type="text" id="address-input" placeholder="Via Roma 15...">
-                <button class="btn-secondary" style="width: auto; padding: 0 16px; margin:0;" onclick="searchAddressManual()">Cerca</button>
+                <input type="text" id="address-input" placeholder="Via Roma 15 (o trascina il pin)">
+                <button class="btn-secondary" style="width: auto; padding: 0 16px; margin-top: 0;" onclick="searchAddressManual()">Cerca</button>
             </div>
-            <button class="btn-secondary" onclick="useGPS()">📍 Usa posizione GPS</button>
-        </div>
-
-        <div class="form-group">
-            <select id="tipo-rifiuto-input">
-                <option value="Generico">Tipo di segnalazione...</option>
-                <option value="Ingombrante">Cassonetti pieni</option>
-                <option value="Ingombrante">Rifiuto Ingombrante (mobili, elettrodomestici)</option>
-                <option value="Ingombrante">Marciapiedi sporchi</option>
-                <option value="Sacco nero">Sacchi neri / Indifferenziata</option>
-                <option value="Edile">Materiale edile / Calcinacci</option>
-                <option value="Verde">Scarti di potatura / Verde</option>
-            </select>
+            <button class="btn-secondary" onclick="useGPS()">📍 Usa la mia posizione GPS</button>
+            <div class="hint-text">💡 Se il civico esatto non viene trovato, usa la ricerca per avvicinarti e <b>sposta/trascina il pin</b> direttamente sul punto preciso della mappa.</div>
         </div>
         
         <div class="form-group">
             <input type="file" id="image-input" accept="image/*" capture="environment">
+            <div class="privacy-note">⚠️ Nota: Evita di includere volti di persone o targhe di veicoli nelle foto.</div>
         </div>
         
         <div class="form-group">
-            <textarea id="desc-input" placeholder="Descrivi il problema..." rows="3"></textarea>
+            <textarea id="desc-input" placeholder="Descrivi il problema (es. buca profonda, rifiuti)..." rows="3"></textarea>
         </div>
-        <button class="btn-main" onclick="submitReport()" style="width:100%; margin-top: 4px;">Invia Segnalazione</button>
+        <button class="btn-main" onclick="submitReport()" style="width:100%; max-width:none; margin-top: 4px;">Invia Segnalazione</button>
     </div>
 
     <!-- Pannello Chiusura -->
@@ -144,10 +171,11 @@
             <h2>Risolvi Segnalazione</h2>
             <button class="close-btn" onclick="closePanel('close-panel')">&times;</button>
         </div>
+        <p style="font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.5;">Inserisci il codice segreto che ti è stato fornito alla creazione per rimuovere la segnalazione.</p>
         <div class="form-group">
-            <input type="text" id="closure-code-input" placeholder="Codice segreto" style="text-transform: uppercase; text-align: center; font-weight: 700;">
+            <input type="text" id="closure-code-input" placeholder="Codice segreto (es. A1B2C3)" style="text-transform: uppercase; text-align: center; font-weight: 700; letter-spacing: 1px;">
         </div>
-        <button class="btn-main btn-alt" onclick="resolveReportByCode()" style="width:100%;">Conferma e Risolvi</button>
+        <button class="btn-main btn-alt" onclick="resolveReportByCode()" style="width:100%; max-width:none;">Conferma e Risolvi</button>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -168,16 +196,35 @@
         const db = firebase.firestore();
 
         var map = L.map('map', { zoomControl: false }).setView([38.1157, 13.3615], 14);
+        L.control.zoom({ position: 'topright' }).addTo(map);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
-        let marker, selectedCoords = null;
+        let marker;
+        let selectedCoords = null;
         let markersLayer = L.layerGroup().addTo(map);
 
         function showToast(msg) {
             const t = document.getElementById('toast');
             t.innerText = msg;
             t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 3000);
+            setTimeout(() => { t.classList.remove('show'); }, 3000);
+        }
+
+        function zoomImage(src) {
+            document.getElementById('zoomed-img').src = src;
+            document.getElementById('photo-overlay').style.display = 'flex';
+        }
+
+        function closeZoom() {
+            document.getElementById('photo-overlay').style.display = 'none';
+        }
+
+        function closeCodeModal() {
+            document.getElementById('code-modal').style.display = 'none';
+        }
+
+        function generateCode() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
         }
 
         function loadMarkers() {
@@ -185,120 +232,172 @@
             db.collection("segnalazioni").get().then((querySnapshot) => {
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    if (data.stato !== "chiusa" && data.lat && data.lng) {
+                    const stato = data.stato || "approvata";
+
+                    if (stato !== "chiusa" && stato !== "in_attesa" && data.lat && data.lng) {
                         const content = `
                             <div class="custom-popup">
-                                <b>${data.tipoRifiuto || 'Segnalazione'}</b>
-                                <p>${data.descrizione || ''}</p>
-                                ${data.foto ? `<img src="${data.foto}" onclick="zoomImage('${data.foto}')">` : ''}
+                                <b>Segnalazione Urbana</b>
+                                <p>${data.descrizione || 'Nessuna descrizione'}</p>
+                                ${data.foto ? `<img src="${data.foto}" onclick="zoomImage('${data.foto}')" title="Clicca per ingrandire">` : ''}
                             </div>
                         `;
                         L.marker([data.lat, data.lng]).addTo(markersLayer).bindPopup(content);
                     }
                 });
-            });
+            }).catch((error) => console.error("Errore nel caricamento: ", error));
         }
+
         loadMarkers();
 
-        // --- FUNZIONE CERCA INDIRIZZO MANUALE ---
-        async function searchAddressManual() {
-            const query = document.getElementById('address-input').value.trim();
-            if (!query) {
-                showToast("Inserisci un indirizzo da cercare");
+        async function resolveReportByCode() {
+            const inputCode = document.getElementById('closure-code-input').value.trim().toUpperCase();
+            if (!inputCode) {
+                showToast("Inserisci un codice valido.");
                 return;
             }
 
-            const searchQuery = query.toLowerCase().includes('palermo') ? query : `${query}, Palermo, Italia`;
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`;
-
             try {
-                showToast("Ricerca in corso...");
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data && data.length > 0) {
-                    const lat = parseFloat(data[0].lat);
-                    const lon = parseFloat(data[0].lon);
-
-                    map.setView([lat, lon], 17);
-                    setMarkerPosition(lat, lon);
-                    showToast("Indirizzo trovato!");
-                } else {
-                    showToast("Indirizzo non trovato");
+                const snapshot = await db.collection("segnalazioni").where("codiceChiusura", "==", inputCode).get();
+                
+                if (snapshot.empty) {
+                    showToast("Codice non valido.");
+                    return;
                 }
+
+                const docId = snapshot.docs[0].id;
+                await db.collection("segnalazioni").doc(docId).update({ stato: "chiusa" });
+
+                showToast("Segnalazione risolta con successo!");
+                document.getElementById('closure-code-input').value = '';
+                closePanel('close-panel');
+                
+                setTimeout(() => { loadMarkers(); }, 500);
+
             } catch (error) {
-                console.error(error);
-                showToast("Errore durante la ricerca");
+                console.error("Errore durante la chiusura: ", error);
+                showToast("Errore durante l'operazione.");
             }
         }
 
-        // --- FUNZIONE GPS ---
+        function openPanel(panelId) { 
+            document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active'); 
+
+            if(panelId === 'report-panel' && !selectedCoords) {
+                const center = map.getCenter();
+                setMarkerPosition(center.lat, center.lng);
+            }
+        }
+        
+        function closePanel(panelId) { 
+            document.getElementById(panelId).classList.remove('active'); 
+        }
+
+        function setMarkerPosition(lat, lng) {
+            if (marker) map.removeLayer(marker);
+            marker = L.marker([lat, lng], {draggable: true}).addTo(map);
+            marker.bindPopup("Trascina il pin sul punto esatto del problema").openPopup();
+            selectedCoords = { lat: lat, lng: lng };
+            
+            marker.on('dragend', function(e) {
+                var pos = marker.getLatLng();
+                selectedCoords = { lat: pos.lat, lng: pos.lng };
+            });
+        }
+
         function useGPS() {
-            if (!navigator.geolocation) {
-                showToast("Geolocalizzazione non supportata dal browser");
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        map.setView([pos.coords.latitude, pos.coords.longitude], 18);
+                        setMarkerPosition(pos.coords.latitude, pos.coords.longitude);
+                        showToast("Posizione GPS acquisita!");
+                    },
+                    err => showToast("Impossibile recuperare il GPS.")
+                );
+            }
+        }
+
+        function searchAddressManual() {
+            const query = document.getElementById('address-input').value.trim();
+            if (!query) {
+                showToast("Scrivi prima un indirizzo!");
                 return;
             }
 
-            showToast("Rilevamento posizione...");
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-
-                    map.setView([lat, lng], 17);
-                    setMarkerPosition(lat, lng);
-                    showToast("Posizione GPS acquisita!");
-                    document.getElementById('address-input').value = `Posizione GPS (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-                },
-                (error) => {
-                    console.error(error);
-                    showToast("Impossibile recuperare la posizione");
-                },
-                { enableHighAccuracy: true }
-            );
+            showToast("Ricerca in corso...");
+            
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Palermo&addressdetails=1&zoom=18&limit=1`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lon = parseFloat(data[0].lon);
+                        
+                        map.setView([lat, lon], 18);
+                        setMarkerPosition(lat, lon);
+                        
+                        const addr = data[0].address;
+                        if (addr && addr.house_number) {
+                            showToast("Civico trovato! Sposta il pin se serve.");
+                        } else {
+                            showToast("Via trovata, ma civico assente. Trascina il pin sul posto!");
+                        }
+                    } else {
+                        showToast("Indirizzo non trovato. Prova ad aggiungere il CAP.");
+                    }
+                })
+                .catch(() => showToast("Errore di connessione."));
         }
 
         async function submitReport() {
             const addressText = document.getElementById('address-input').value.trim();
             const description = document.getElementById('desc-input').value;
-            const tipoRifiuto = document.getElementById('tipo-rifiuto-input').value;
             
-            if (!addressText || !selectedCoords) {
-                showToast("Completa indirizzo e posizione sulla mappa!");
+            if (!addressText) {
+                showToast("Inserisci il nome della via o un riferimento!");
                 return;
+            }
+
+            if (!selectedCoords) { 
+                showToast("Seleziona la posizione sulla mappa!"); 
+                return; 
             }
 
             const imageInput = document.getElementById('image-input');
             let imageDataUrl = "";
-            
+
             if (imageInput.files && imageInput.files[0]) {
-                try {
-                    imageDataUrl = await new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            const img = new Image();
-                            img.onload = () => {
-                                const canvas = document.createElement('canvas');
-                                canvas.width = 600; 
-                                canvas.height = (img.height / img.width) * 600;
-                                const ctx = canvas.getContext('2d');
-                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                                resolve(canvas.toDataURL('image/jpeg', 0.6));
-                            };
-                            img.onerror = reject;
-                            img.src = e.target.result;
+                const file = imageInput.files[0];
+                
+                imageDataUrl = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const MAX_WIDTH = 800;
+                            const scaleSize = MAX_WIDTH / img.width;
+                            
+                            canvas.width = scaleSize < 1 ? MAX_WIDTH : img.width;
+                            canvas.height = scaleSize < 1 ? img.height * scaleSize : img.height;
+
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            
+                            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                            resolve(compressedDataUrl);
                         };
-                        reader.onerror = reject;
-                        reader.readAsDataURL(imageInput.files[0]);
-                    });
-                } catch (err) {
-                    console.error("Errore caricamento immagine:", err);
-                    showToast("Errore nel caricamento dell'immagine");
-                    return;
-                }
+                        img.onerror = () => resolve("");
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = () => resolve("");
+                    reader.readAsDataURL(file);
+                });
             }
 
-            const closureCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const closureCode = generateCode();
 
             try {
                 await db.collection("segnalazioni").add({
@@ -306,35 +405,25 @@
                     lat: selectedCoords.lat,
                     lng: selectedCoords.lng,
                     descrizione: description,
-                    tipoRifiuto: tipoRifiuto,
                     foto: imageDataUrl,
-                    stato: "approvata",
+                    stato: "in_attesa",
                     codiceChiusura: closureCode,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
-
+                
                 document.getElementById('display-closure-code').innerText = closureCode;
                 document.getElementById('code-modal').style.display = 'flex';
-                closePanel('report-panel');
-                loadMarkers();
-            } catch (error) {
-                console.error("Errore salvataggio:", error);
-                showToast("Errore durante l'invio della segnalazione");
-            }
-        }
 
-        // --- Helper funzioni di UI ---
-        function openPanel(id) { document.getElementById(id).classList.add('active'); }
-        function closePanel(id) { document.getElementById(id).classList.remove('active'); }
-        function zoomImage(src) { document.getElementById('zoomed-img').src = src; document.getElementById('photo-overlay').style.display = 'flex'; }
-        function closeZoom() { document.getElementById('photo-overlay').style.display = 'none'; }
-        function closeCodeModal() { document.getElementById('code-modal').style.display = 'none'; }
-        
-        function setMarkerPosition(lat, lng) {
-            if (marker) map.removeLayer(marker);
-            marker = L.marker([lat, lng], {draggable: true}).addTo(map);
-            selectedCoords = { lat, lng };
-            marker.on('dragend', (e) => { const pos = marker.getLatLng(); selectedCoords = { lat: pos.lat, lng: pos.lng }; });
+                document.getElementById('address-input').value = '';
+                document.getElementById('desc-input').value = '';
+                document.getElementById('image-input').value = '';
+                if (marker) map.removeLayer(marker);
+                selectedCoords = null;
+                closePanel('report-panel');
+            } catch (error) {
+                console.error("Errore durante il salvataggio: ", error);
+                showToast("Errore durante l'invio.");
+            }
         }
     </script>
 </body>
