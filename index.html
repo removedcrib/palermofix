@@ -5,13 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Palermo Fix - Segnalazioni Rifiuti</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- EmailJS SDK -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <script type="text/javascript">
-        (function() {
-            emailjs.init("gnuXTpivricKH33Ni"); // Sostituisci con la tua Public Key di EmailJS
-        })();
-    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
@@ -134,7 +127,7 @@
     <div id="code-modal">
         <div class="modal-content">
             <h3>Segnalazione Inviata! 🚀</h3>
-            <p style="font-size: 13px; color: #666; line-height: 1.5;">La tua segnalazione è stata presa in carico e sarà visibile sulla mappa non appena verrà approvata. Ti abbiamo inviato il codice anche via email. Conservalo per poterla chiudere in futuro:</p>
+            <p style="font-size: 13px; color: #666; line-height: 1.5;">La tua segnalazione è stata presa in carico e sarà visibile sulla mappa non appena verrà approvata. Conserva questo codice per poterla chiudere in futuro:</p>
             <div class="code-box" id="display-closure-code">------</div>
             <button class="btn-main" style="width: 100%; max-width: none; padding: 14px;" onclick="closeCodeModal()">Ho salvato il codice</button>
         </div>
@@ -170,11 +163,6 @@
                 <option value="Materiale edile e inerti">Materiale edile e inerti</option>
                 <option value="Sfalci di potatura e verde">Sfalci di potatura e verde</option>
             </select>
-        </div>
-
-        <div class="form-group">
-            <input type="email" id="email-input" placeholder="Tua email (per ricevere il codice)" required>
-            <div class="hint-text">✉️ Inserisci la tua email per ricevere il codice segreto di sblocco/chiusura.</div>
         </div>
         
         <div class="form-group">
@@ -257,6 +245,7 @@
                     const data = doc.data();
                     const stato = data.stato || "in_attesa";
 
+                    // Mostra sulla mappa SOLO le segnalazioni che hanno stato "approvata"
                     if (stato === "approvata" && data.lat && data.lng) {
                         let pinColor = "#ff6b35"; 
                         switch(data.tipoRifiuto) {
@@ -394,7 +383,6 @@
         async function submitReport() {
             const addressText = document.getElementById('address-input').value.trim();
             const tipoRifiuto = document.getElementById('tipo-rifiuto-input').value;
-            const emailText = document.getElementById('email-input').value.trim();
             const description = document.getElementById('desc-input').value;
             
             if (!addressText) {
@@ -404,11 +392,6 @@
 
             if (!tipoRifiuto) {
                 showToast("Seleziona la tipologia di rifiuto!");
-                return;
-            }
-
-            if (!emailText || !emailText.includes('@')) {
-                showToast("Inserisci un'email valida per ricevere il codice!");
                 return;
             }
 
@@ -455,32 +438,20 @@
                 await db.collection("segnalazioni").add({
                     indirizzoManuale: addressText,
                     tipoRifiuto: tipoRifiuto,
-                    email: emailText,
                     lat: selectedCoords.lat,
                     lng: selectedCoords.lng,
                     descrizione: description,
                     foto: imageDataUrl,
-                    stato: "in_attesa",
+                    stato: "in_attesa", // IMPOSTATO SU IN_ATTESA: Richiede la tua approvazione manuale per comparire sulla mappa
                     codiceChiusura: closureCode,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                emailjs.send("service_00o5cml", "template_0sfzma5", {
-                    user_email: emailText,
-                    closure_code: closureCode,
-                    report_type: tipoRifiuto
-                }).then(() => {
-                    console.log("Email inviata con successo!");
-                }, (error) => {
-                    console.error("Errore nell'invio email:", error);
-                });
-
                 document.getElementById('display-closure-code').innerText = closureCode;
                 document.getElementById('code-modal').style.display = 'flex';
 
                 document.getElementById('address-input').value = '';
                 document.getElementById('tipo-rifiuto-input').value = '';
-                document.getElementById('email-input').value = '';
                 document.getElementById('desc-input').value = '';
                 document.getElementById('image-input').value = '';
                 if (marker) map.removeLayer(marker);
