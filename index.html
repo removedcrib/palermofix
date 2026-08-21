@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Palermo Fix - Segnalazioni Rifiuti</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- SDK EmailJS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script type="text/javascript">
+        (function() {
+            emailjs.init({
+                publicKey: "gnuXTpivricKH33Ni",
+            });
+        })();
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
@@ -127,9 +136,9 @@
     <div id="code-modal">
         <div class="modal-content">
             <h3>Segnalazione Inviata! 🚀</h3>
-            <p style="font-size: 13px; color: #666; line-height: 1.5;">La tua segnalazione è stata presa in carico e sarà visibile sulla mappa non appena verrà approvata. Conserva questo codice per poterla chiudere in futuro:</p>
+            <p style="font-size: 13px; color: #666; line-height: 1.5;">Ti abbiamo inviato un'email con il tuo codice segreto. Controlla anche nello spam se non lo trovi!</p>
             <div class="code-box" id="display-closure-code">------</div>
-            <button class="btn-main" style="width: 100%; max-width: none; padding: 14px;" onclick="closeCodeModal()">Ho salvato il codice</button>
+            <button class="btn-main" style="width: 100%; max-width: none; padding: 14px;" onclick="closeCodeModal()">Ho capito</button>
         </div>
     </div>
 
@@ -152,6 +161,11 @@
             </div>
             <button class="btn-secondary" onclick="useGPS()">📍 Usa la mia posizione GPS</button>
             <div class="hint-text">💡 Se il civico esatto non viene trovato, usa la ricerca per avvicinarti e <b>sposta/trascina il pin</b> direttamente sul punto preciso della mappa.</div>
+        </div>
+
+        <!-- Campo Email Utente -->
+        <div class="form-group">
+            <input type="email" id="email-input" placeholder="La tua email (per ricevere il codice)...">
         </div>
 
         <div class="form-group">
@@ -182,7 +196,7 @@
             <h2>Risolvi Segnalazione</h2>
             <button class="close-btn" onclick="closePanel('close-panel')">&times;</button>
         </div>
-        <p style="font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.5;">Inserisci il codice segreto che ti è stato fornito alla creazione per rimuovere la segnalazione.</p>
+        <p style="font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.5;">Inserisci il codice segreto che hai ricevuto via email per rimuovere la segnalazione.</p>
         <div class="form-group">
             <input type="text" id="closure-code-input" placeholder="Codice segreto (es. A1B2C3)" style="text-transform: uppercase; text-align: center; font-weight: 700; letter-spacing: 1px;">
         </div>
@@ -245,7 +259,6 @@
                     const data = doc.data();
                     const stato = data.stato || "in_attesa";
 
-                    // Mostra sulla mappa SOLO le segnalazioni che hanno stato "approvata"
                     if (stato === "approvata" && data.lat && data.lng) {
                         let pinColor = "#ff6b35"; 
                         switch(data.tipoRifiuto) {
@@ -382,11 +395,17 @@
 
         async function submitReport() {
             const addressText = document.getElementById('address-input').value.trim();
+            const userEmail = document.getElementById('email-input').value.trim();
             const tipoRifiuto = document.getElementById('tipo-rifiuto-input').value;
             const description = document.getElementById('desc-input').value;
             
             if (!addressText) {
                 showToast("Inserisci il nome della via o un riferimento!");
+                return;
+            }
+
+            if (!userEmail || !userEmail.includes('@')) {
+                showToast("Inserisci un'email valida per ricevere il codice!");
                 return;
             }
 
@@ -435,22 +454,34 @@
             const closureCode = generateCode();
 
             try {
+                // 1. Salvataggio su Firebase con stato "in_attesa"
                 await db.collection("segnalazioni").add({
                     indirizzoManuale: addressText,
+                    email: userEmail,
                     tipoRifiuto: tipoRifiuto,
                     lat: selectedCoords.lat,
                     lng: selectedCoords.lng,
                     descrizione: description,
                     foto: imageDataUrl,
-                    stato: "in_attesa", // IMPOSTATO SU IN_ATTESA: Richiede la tua approvazione manuale per comparire sulla mappa
+                    stato: "in_attesa",
                     codiceChiusura: closureCode,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
+                // 2. Invio Email automatizzato tramite EmailJS
+                const templateParams = {
+                    user_email: userEmail,
+                    closure_code: closureCode,
+                    tipo_rifiuto: tipoRifiuto
+                };
+
+                await emailjs.send('service_00o5cml', 'template_0sfzma5', templateParams);
+
                 document.getElementById('display-closure-code').innerText = closureCode;
                 document.getElementById('code-modal').style.display = 'flex';
 
                 document.getElementById('address-input').value = '';
+                document.getElementById('email-input').value = '';
                 document.getElementById('tipo-rifiuto-input').value = '';
                 document.getElementById('desc-input').value = '';
                 document.getElementById('image-input').value = '';
@@ -459,8 +490,8 @@
                 closePanel('report-panel');
                 loadMarkers();
             } catch (error) {
-                console.error("Errore durante il salvataggio: ", error);
-                showToast("Errore durante l'invio: " + error.message);
+                console.error("Errore durante il salvataggio o l'invio email: ", error);
+                showToast("Errore durante l'invio della segnalazione.");
             }
         }
     </script>
