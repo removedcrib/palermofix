@@ -14,8 +14,10 @@
         .btn-main { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 50px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 100%; max-width: 400px; cursor: pointer; }
         .btn-alt { background: #27ae60; }
         
-        .slide-panel { position: fixed; bottom: -100%; left: 0; right: 0; height: 85vh; background: white; border-radius: 20px 20px 0 0; z-index: 2000; transition: bottom 0.3s ease-out; padding: 20px; box-sizing: border-box; overflow-y: auto; }
-        .slide-panel.active { bottom: 0; }
+        /* Gestione degli stati del pannello: default attivo (85vh), oppure ridotto (active-half) per vedere la mappa */
+        .slide-panel { position: fixed; bottom: -100%; left: 0; right: 0; height: 85vh; background: white; border-radius: 20px 20px 0 0; z-index: 2000; transition: bottom 0.3s ease-out, height 0.3s ease-out; padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        .slide-panel.active { bottom: 0; height: 85vh; }
+        .slide-panel.active-half { bottom: 0; height: 40vh; }
         
         .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .form-group { margin-bottom: 15px; position: relative; }
@@ -63,7 +65,7 @@
         <img id="zoomed-img" src="">
     </div>
 
-    <!-- Modale Codice di Chiudura/Invio -->
+    <!-- Modale Codice di Chiusura/Invio -->
     <div id="code-modal">
         <div class="modal-content">
             <h3>Segnalazione Inviata!</h3>
@@ -86,10 +88,10 @@
         </div>
         
         <div class="form-group">
-            <input type="text" id="address-input" placeholder="Cerca via o piazza a Palermo..." autocomplete="off">
+            <input type="text" id="address-input" placeholder="Cerca via o civico a Palermo (es. Via Roma 15)..." autocomplete="off">
             <div id="suggestions-list"></div>
             <button class="btn-secondary" onclick="useGPS()">Usa la mia posizione GPS</button>
-            <div class="hint-text">💡 Suggerimento: puoi trascinare il pin sulla mappa per posizionarlo esattamente davanti al civico corretto.</div>
+            <div class="hint-text">💡 Suggerimento: seleziona l'indirizzo per posizionare il pin. Il pannello si ridurrà per permetterti di trascinarlo comodamente sulla mappa.</div>
         </div>
         
         <div class="form-group">
@@ -164,13 +166,12 @@
             return Math.random().toString(36).substring(2, 8).toUpperCase();
         }
 
-        // Carica le segnalazioni gestendo anche la retrocompatibilità con i vecchi pin
         function loadMarkers() {
             markersLayer.clearLayers();
             db.collection("segnalazioni").get().then((querySnapshot) => {
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    const stato = data.stato || "approvata"; // Retrocompatibilità: se manca lo stato, consideralo valido
+                    const stato = data.stato || "approvata";
 
                     if (stato !== "chiusa" && stato !== "in_attesa" && data.lat && data.lng) {
                         const content = `
@@ -210,7 +211,6 @@
                 document.getElementById('closure-code-input').value = '';
                 closePanel('close-panel');
                 
-                // Attende un istante per dare tempo a Firestore di aggiornarsi e rimuove il pin all'istante
                 setTimeout(() => {
                     loadMarkers();
                 }, 500);
@@ -222,12 +222,27 @@
         }
 
         function openPanel(panelId) { 
-            document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
-            document.getElementById(panelId).classList.add('active'); 
+            document.querySelectorAll('.slide-panel').forEach(p => {
+                p.classList.remove('active');
+                p.classList.remove('active-half');
+            });
+            const panel = document.getElementById(panelId);
+            panel.classList.add('active'); 
         }
         
         function closePanel(panelId) { 
-            document.getElementById(panelId).classList.remove('active'); 
+            const panel = document.getElementById(panelId);
+            panel.classList.remove('active');
+            panel.classList.remove('active-half');
+        }
+
+        // Riduce il pannello a metà altezza per permettere di interagire/trascinare il pin sulla mappa
+        function minimizePanelForMap(panelId) {
+            const panel = document.getElementById(panelId);
+            panel.classList.remove('active');
+            panel.classList.add('active-half');
+            // Invalida le dimensioni della mappa per evitare bug di visualizzazione di Leaflet
+            setTimeout(() => { map.invalidateSize(); }, 300);
         }
 
         function setMarker(lat, lng) {
@@ -240,6 +255,9 @@
                 var pos = marker.getLatLng();
                 selectedCoords = { lat: pos.lat, lng: pos.lng };
             });
+
+            // Riduce automaticamente il pannello per liberare la vista sulla mappa
+            minimizePanelForMap('report-panel');
         }
 
         function useGPS() {
@@ -265,7 +283,7 @@
             }
 
             searchTimeout = setTimeout(() => {
-                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Palermo, Italia`)
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}, Palermo, Italia`)
                     .then(r => r.json())
                     .then(data => {
                         suggestionsList.innerHTML = '';
