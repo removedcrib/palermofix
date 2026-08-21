@@ -147,11 +147,11 @@
         
         <div class="form-group">
             <div style="display: flex; gap: 8px;">
-                <input type="text" id="address-input" placeholder="Cerca via (es. Via Roma 15)...">
+                <input type="text" id="address-input" placeholder="Via Roma 15 (o trascina il pin)">
                 <button class="btn-secondary" style="width: auto; padding: 0 16px; margin-top: 0;" onclick="searchAddressManual()">Cerca</button>
             </div>
             <button class="btn-secondary" onclick="useGPS()">📍 Usa la mia posizione GPS</button>
-            <div class="hint-text">💡 Inserisci la via e clicca "Cerca", oppure usa il GPS. Potrai comunque trascinare il pin sul punto esatto.</div>
+            <div class="hint-text">💡 Se il civico esatto non viene trovato, usa la ricerca per avvicinarti e <b>sposta/trascina il pin</b> direttamente sul punto preciso della mappa.</div>
         </div>
         
         <div class="form-group">
@@ -310,7 +310,7 @@
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     pos => {
-                        map.setView([pos.coords.latitude, pos.coords.longitude], 17);
+                        map.setView([pos.coords.latitude, pos.coords.longitude], 18);
                         setMarkerPosition(pos.coords.latitude, pos.coords.longitude);
                         showToast("Posizione GPS acquisita!");
                     },
@@ -328,17 +328,24 @@
 
             showToast("Ricerca in corso...");
             
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Palermo`)
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Palermo&addressdetails=1&zoom=18&limit=1`)
                 .then(r => r.json())
                 .then(data => {
                     if (data && data.length > 0) {
                         const lat = parseFloat(data[0].lat);
                         const lon = parseFloat(data[0].lon);
-                        map.setView([lat, lon], 17);
+                        
+                        map.setView([lat, lon], 18);
                         setMarkerPosition(lat, lon);
-                        showToast("Trovato! Trascina il pin se serve.");
+                        
+                        const addr = data[0].address;
+                        if (addr && addr.house_number) {
+                            showToast("Civico trovato! Sposta il pin se serve.");
+                        } else {
+                            showToast("Via trovata, ma civico assente. Trascina il pin sul posto!");
+                        }
                     } else {
-                        showToast("Indirizzo non trovato. Prova ad essere più specifico.");
+                        showToast("Indirizzo non trovato. Prova ad aggiungere il CAP.");
                     }
                 })
                 .catch(() => showToast("Errore di connessione."));
