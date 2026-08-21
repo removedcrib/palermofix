@@ -63,9 +63,6 @@
         
         .btn-secondary { background: rgba(255, 107, 53, 0.1); color: var(--primary); border: none; padding: 12px; border-radius: 12px; margin-top: 8px; cursor: pointer; width: 100%; font-weight: 700; font-size: 13px; }
         
-        .privacy-note { font-size: 11px; color: #e76f51; margin-top: 6px; }
-        .hint-text { font-size: 11px; color: #6c757d; margin-top: 6px; }
-
         .leaflet-popup-content-wrapper { border-radius: 16px; padding: 4px; }
         .custom-popup b { color: var(--primary); font-size: 15px; display: block; margin-bottom: 4px; }
         .custom-popup img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 10px; margin-top: 8px; cursor: zoom-in; }
@@ -203,20 +200,80 @@
         }
         loadMarkers();
 
+        // --- FUNZIONE CERCA INDIRIZZO MANUALE ---
+        async function searchAddressManual() {
+            const query = document.getElementById('address-input').value.trim();
+            if (!query) {
+                showToast("Inserisci un indirizzo da cercare");
+                return;
+            }
+
+            // Aggiungiamo "Palermo" per geocodificare in modo mirato
+            const searchQuery = query.toLowerCase().includes('palermo') ? query : `${query}, Palermo, Italia`;
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`;
+
+            try {
+                showToast("Ricerca in corso...");
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+
+                    map.setView([lat, lon], 17);
+                    setMarkerPosition(lat, lon);
+                    showToast("Indirizzo trovato!");
+                } else {
+                    showToast("Indirizzo non trovato");
+                }
+            } catch (error) {
+                console.error(error);
+                showToast("Errore durante la ricerca");
+            }
+        }
+
+        // --- FUNZIONE GPS ---
+        function useGPS() {
+            if (!navigator.geolocation) {
+                showToast("Geolocalizzazione non supportata dal browser");
+                return;
+            }
+
+            showToast("Rilevamento posizione...");
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    map.setView([lat, lng], 17);
+                    setMarkerPosition(lat, lng);
+                    showToast("Posizione GPS acquisita!");
+                    
+                    // Facoltativo: compila anche l'input indirizzo con le coordinate o una stringa approssimativa
+                    document.getElementById('address-input').value = `Posizione GPS (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+                },
+                (error) => {
+                    console.error(error);
+                    showToast("Impossibile recuperare la posizione");
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+
         async function submitReport() {
             const addressText = document.getElementById('address-input').value.trim();
             const description = document.getElementById('desc-input').value;
             const tipoRifiuto = document.getElementById('tipo-rifiuto-input').value;
             
             if (!addressText || !selectedCoords) {
-                showToast("Completa indirizzo e posizione!");
+                showToast("Completa indirizzo e posizione sulla mappa!");
                 return;
             }
 
             const imageInput = document.getElementById('image-input');
             let imageDataUrl = "";
             if (imageInput.files && imageInput.files[0]) {
-                // (Logica compressione immagine mantenuta identica)
                 imageDataUrl = await new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.onload = (e) => {
