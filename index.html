@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Palermo Fix - Segnalazioni Urbane</title>
+    <title>Palermo Fix - Segnalazioni Rifiuti</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -33,7 +33,7 @@
             padding: 16px 28px; border-radius: 20px; font-size: 16px; font-weight: 700; 
             box-shadow: 0 10px 25px rgba(255, 107, 53, 0.4); width: 100%; max-width: 380px; 
             cursor: pointer; transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            pointer-events: auto; display: flex; align-items: center; justify-content: center; gap: 8px;
+            pointer-events: auto; display: flex; align-items: center; justify-content: center; gap: 8px; 
             letter-spacing: -0.3px;
         }
         .btn-main:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(255, 107, 53, 0.5); }
@@ -75,12 +75,12 @@
         .close-btn:hover { background: rgba(0,0,0,0.1); }
 
         .form-group { margin-bottom: 16px; position: relative; }
-        input, textarea { 
+        input, textarea, select { 
             width: 100%; padding: 14px 16px; border: 2px solid rgba(0,0,0,0.06); 
             border-radius: 14px; box-sizing: border-box; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif;
             background: rgba(255, 255, 255, 0.9); color: var(--dark); transition: all 0.2s;
         }
-        input:focus, textarea:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1); }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1); }
         
         .btn-secondary { 
             background: rgba(255, 107, 53, 0.1); color: var(--primary); border: none; 
@@ -94,7 +94,7 @@
 
         .leaflet-popup-content-wrapper { border-radius: 16px; padding: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
         .custom-popup img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 10px; margin-top: 8px; cursor: zoom-in; }
-        .custom-popup b { color: var(--dark); font-size: 14px; }
+        .custom-popup b { font-size: 14px; }
         .custom-popup p { margin: 6px 0 0 0; font-size: 13px; color: #555; }
 
         #photo-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; display: none; justify-content: center; align-items: center; cursor: zoom-out; }
@@ -134,7 +134,7 @@
     </div>
 
     <div id="ui-overlay">
-        <button class="btn-main" onclick="openPanel('report-panel')">✨ Nuova Segnalazione</button>
+        <button class="btn-main" onclick="openPanel('report-panel')">✨ Nuova Segnalazione Rifiuti</button>
         <button class="btn-main btn-alt" onclick="openPanel('close-panel')">✔️ Risolvi con Codice</button>
     </div>
 
@@ -153,6 +153,18 @@
             <button class="btn-secondary" onclick="useGPS()">📍 Usa la mia posizione GPS</button>
             <div class="hint-text">💡 Se il civico esatto non viene trovato, usa la ricerca per avvicinarti e <b>sposta/trascina il pin</b> direttamente sul punto preciso della mappa.</div>
         </div>
+
+        <!-- Selezione della tipologia di rifiuto -->
+        <div class="form-group">
+            <select id="tipo-rifiuto-input">
+                <option value="" disabled selected>Seleziona tipologia rifiuto...</option>
+                <option value="Cassonetti saturi o traboccanti">Cassonetti saturi o traboccanti</option>
+                <option value="Abbandono rifiuti ingombranti">Abbandono rifiuti ingombranti</option>
+                <option value="Micro-discarica / Sacchi abbandonati">Micro-discarica / Sacchi abbandonati</option>
+                <option value="Materiale edile e inerti">Materiale edile e inerti</option>
+                <option value="Sfalci di potatura e verde">Sfalci di potatura e verde</option>
+            </select>
+        </div>
         
         <div class="form-group">
             <input type="file" id="image-input" accept="image/*" capture="environment">
@@ -160,7 +172,7 @@
         </div>
         
         <div class="form-group">
-            <textarea id="desc-input" placeholder="Descrivi il problema (es. buca profonda, rifiuti)..." rows="3"></textarea>
+            <textarea id="desc-input" placeholder="Aggiungi dettagli aggiuntivi..." rows="3"></textarea>
         </div>
         <button class="btn-main" onclick="submitReport()" style="width:100%; max-width:none; margin-top: 4px;">Invia Segnalazione</button>
     </div>
@@ -234,15 +246,34 @@
                     const data = doc.data();
                     const stato = data.stato || "approvata";
 
-                    if (stato !== "chiusa" && stato !== "in_attesa" && data.lat && data.lng) {
+                    if (stato !== "chiusa" && data.lat && data.lng) {
+                        // Assegna un colore mirato in base alla tipologia di rifiuto
+                        let pinColor = "#ff6b35"; 
+                        switch(data.tipoRifiuto) {
+                            case "Micro-discarica / Sacchi abbandonati": pinColor = "#e63946"; break; // Rosso vivo
+                            case "Cassonetti saturi o traboccanti": pinColor = "#ffb703"; break; // Arancione
+                            case "Abbandono rifiuti ingombranti": pinColor = "#8d6e63"; break; // Marrone
+                            case "Materiale edile e inerti": pinColor = "#d4a373"; break; // Mattone
+                            case "Sfalci di potatura e verde": pinColor = "#2ec4b6"; break; // Verde
+                        }
+
                         const content = `
                             <div class="custom-popup">
-                                <b>Segnalazione Urbana</b>
+                                <b style="color: ${pinColor};">${data.tipoRifiuto || 'Segnalazione Rifiuti'}</b>
                                 <p>${data.descrizione || 'Nessuna descrizione'}</p>
                                 ${data.foto ? `<img src="${data.foto}" onclick="zoomImage('${data.foto}')" title="Clicca per ingrandire">` : ''}
                             </div>
                         `;
-                        L.marker([data.lat, data.lng]).addTo(markersLayer).bindPopup(content);
+                        
+                        // Utilizziamo un marker circolare stilizzato colorato
+                        L.circleMarker([data.lat, data.lng], {
+                            radius: 9,
+                            fillColor: pinColor,
+                            color: "#ffffff",
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.9
+                        }).addTo(markersLayer).bindPopup(content);
                     }
                 });
             }).catch((error) => console.error("Errore nel caricamento: ", error));
@@ -353,10 +384,16 @@
 
         async function submitReport() {
             const addressText = document.getElementById('address-input').value.trim();
+            const tipoRifiuto = document.getElementById('tipo-rifiuto-input').value;
             const description = document.getElementById('desc-input').value;
             
             if (!addressText) {
                 showToast("Inserisci il nome della via o un riferimento!");
+                return;
+            }
+
+            if (!tipoRifiuto) {
+                showToast("Seleziona la tipologia di rifiuto!");
                 return;
             }
 
@@ -402,11 +439,12 @@
             try {
                 await db.collection("segnalazioni").add({
                     indirizzoManuale: addressText,
+                    tipoRifiuto: tipoRifiuto,
                     lat: selectedCoords.lat,
                     lng: selectedCoords.lng,
                     descrizione: description,
                     foto: imageDataUrl,
-                    stato: "in_attesa",
+                    stato: "approvata",
                     codiceChiusura: closureCode,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
@@ -415,14 +453,16 @@
                 document.getElementById('code-modal').style.display = 'flex';
 
                 document.getElementById('address-input').value = '';
+                document.getElementById('tipo-rifiuto-input').value = '';
                 document.getElementById('desc-input').value = '';
                 document.getElementById('image-input').value = '';
                 if (marker) map.removeLayer(marker);
                 selectedCoords = null;
                 closePanel('report-panel');
+                loadMarkers();
             } catch (error) {
                 console.error("Errore durante il salvataggio: ", error);
-                showToast("Errore durante l'invio.");
+                showToast("Errore durante l'invio: " + error.message);
             }
         }
     </script>
