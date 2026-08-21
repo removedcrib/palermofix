@@ -22,9 +22,13 @@
         .btn-secondary { background: #f39c12; color: white; border: none; padding: 10px; border-radius: 8px; margin: 5px 0; cursor: pointer; width: 100%; }
 
         /* Stile moderno per popup mappa */
-        .custom-popup img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
+        .custom-popup img { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-top: 8px; cursor: zoom-in; }
         .custom-popup p { margin: 5px 0 0 0; font-size: 14px; color: #444; }
         
+        /* Overlay Fullscreen per lo Zoom delle Foto */
+        #photo-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; display: none; justify-content: center; align-items: center; cursor: zoom-out; }
+        #photo-overlay img { max-width: 95%; max-height: 95%; border-radius: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); }
+
         /* Toast Notification moderna al posto degli alert */
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.85); color: white; padding: 12px 24px; border-radius: 30px; z-index: 3000; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
     </style>
@@ -33,6 +37,11 @@
 
     <div id="map"></div>
     <div id="toast"></div>
+
+    <!-- Overlay Fullscreen per lo Zoom -->
+    <div id="photo-overlay" onclick="closeZoom()">
+        <img id="zoomed-img" src="">
+    </div>
 
     <div id="ui-overlay">
         <button class="btn-main" onclick="openPanel()">+ Nuova Segnalazione</button>
@@ -82,12 +91,22 @@
         let marker;
         let selectedCoords = null;
 
-        // Gestione notifiche Toast (moderne, niente alert anni '90)
+        // Gestione notifiche Toast
         function showToast(msg) {
             const t = document.getElementById('toast');
             t.innerText = msg;
             t.style.opacity = 1;
             setTimeout(() => { t.style.opacity = 0; }, 3000);
+        }
+
+        // Funzioni per lo Zoom Fullscreen dell'immagine
+        function zoomImage(src) {
+            document.getElementById('zoomed-img').src = src;
+            document.getElementById('photo-overlay').style.display = 'flex';
+        }
+
+        function closeZoom() {
+            document.getElementById('photo-overlay').style.display = 'none';
         }
 
         function loadApprovedMarkers() {
@@ -99,7 +118,7 @@
                             <div class="custom-popup">
                                 <b>Segnalazione</b>
                                 <p>${data.descrizione || 'Nessuna descrizione'}</p>
-                                ${data.foto ? `<img src="${data.foto}">` : ''}
+                                ${data.foto ? `<img src="${data.foto}" onclick="zoomImage('${data.foto}')" title="Clicca per ingrandire">` : ''}
                             </div>
                         `;
                         L.marker([data.lat, data.lng]).addTo(map).bindPopup(content);
