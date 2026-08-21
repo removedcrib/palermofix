@@ -220,7 +220,36 @@
         <div class="form-group">
             <textarea id="desc-input" placeholder="Aggiungi dettagli aggiuntivi..." rows="3"></textarea>
         </div>
+
+        <!-- Checkbox GDPR Obbligatoria -->
+        <div class="form-group" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; text-align: left;">
+            <input type="checkbox" id="privacy-check" style="width: 20px; height: 20px; margin-top: 2px; accent-color: var(--primary); cursor: pointer;" required>
+            <label for="privacy-check" style="font-size: 11px; color: #555; line-height: 1.4; cursor: pointer;">
+                Dichiaro di aver preso visione dell'<a href="#" onclick="openPrivacyModal(event)" style="color: var(--primary); font-weight: 700; text-decoration: underline;">Informativa sulla Privacy</a> e autorizzo il trattamento dei dati per la segnalazione civica.
+            </label>
+        </div>
+
         <button class="btn-main" onclick="submitReport()" style="width:100%; max-width:none; margin-top: 4px;">Invia Segnalazione</button>
+    </div>
+
+    <!-- Pannello Informativa Privacy (GDPR) -->
+    <div id="privacy-modal" class="slide-panel">
+        <div class="panel-header">
+            <h2>Informativa Privacy</h2>
+            <button class="close-btn" onclick="closePanel('privacy-modal')">&times;</button>
+        </div>
+        <div style="font-size: 13px; color: #444; line-height: 1.6; max-height: 50vh; overflow-y: auto; padding-right: 5px; text-align: left;">
+            <p><b>1. Titolare del Trattamento</b><br>Palermo Fix è una piattaforma civica sperimentale. I dati raccolti sono trattati nel rispetto del Regolamento UE 2016/679 (GDPR).</p>
+            
+            <p><b>2. Dati Raccolti e Finalità</b><br>Raccogliamo esclusivamente le coordinate geografiche, la tipologia di rifiuto, una descrizione opzionale e fotografie caricate volontariamente al solo scopo di mappare e gestire il decoro urbano.</p>
+            
+            <p><b>3. Immagini e Contenuti</b><br>È fatto divieto assoluto agli utenti di caricare fotografie contenenti dati personali identificabili (es. volti di persone, targhe di automobili). Eventuali immagini non conformi verranno rimosse dagli amministratori.</p>
+            
+            <p><b>4. Conservazione dei Dati</b><br>I dati rimangono visibili sulla mappa pubblica fino alla loro risoluzione o cancellazione tramite il codice segreto assegnato all'utente. Non viene effettuata alcuna profilazione commerciale né cessione a terzi.</p>
+            
+            <p><b>5. Diritti dell'Utente</b><br>Puoi richiedere la cancellazione immediata di una segnalazione utilizzando il tuo codice di chiusura o contattando il supporto del progetto.</p>
+        </div>
+        <button class="btn-main" onclick="closePanel('privacy-modal')" style="width: 100%; max-width: none; margin-top: 15px;">Ho capito</button>
     </div>
 
     <!-- Pannello Chiusura -->
@@ -396,6 +425,11 @@
             document.getElementById(panelId).classList.remove('active'); 
         }
 
+        function openPrivacyModal(e) {
+            e.preventDefault();
+            openPanel('privacy-modal');
+        }
+
         function setMarkerPosition(lat, lng) {
             if (marker) map.removeLayer(marker);
             marker = L.marker([lat, lng], {draggable: true}).addTo(map);
@@ -457,6 +491,7 @@
             const addressText = document.getElementById('address-input').value.trim();
             const tipoRifiuto = document.getElementById('tipo-rifiuto-input').value;
             const description = document.getElementById('desc-input').value;
+            const privacyChecked = document.getElementById('privacy-check').checked;
             
             if (!addressText) {
                 showToast("Inserisci il nome della via o un riferimento!");
@@ -471,6 +506,11 @@
             if (!selectedCoords) { 
                 showToast("Seleziona la posizione sulla mappa!"); 
                 return; 
+            }
+
+            if (!privacyChecked) {
+                showToast("Devi accettare l'informativa sulla privacy per procedere.");
+                return;
             }
 
             const imageInput = document.getElementById('image-input');
@@ -527,6 +567,7 @@
                 document.getElementById('tipo-rifiuto-input').value = '';
                 document.getElementById('desc-input').value = '';
                 document.getElementById('image-input').value = '';
+                document.getElementById('privacy-check').checked = false;
                 if (marker) map.removeLayer(marker);
                 selectedCoords = null;
                 closePanel('report-panel');
