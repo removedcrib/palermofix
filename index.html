@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Palermo Fix - Segnalazioni</title>
+    <title>Palermo Fix - Segnalazioni Diffuse</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --primary: #e67e22; --dark: #2c3e50; }
@@ -22,10 +22,11 @@
         .btn-secondary { background: #f39c12; color: white; border: none; padding: 10px; border-radius: 8px; margin: 5px 0; cursor: pointer; width: 100%; }
 
         /* Stile moderno per popup mappa */
-        .custom-popup img { width: 100%; border-radius: 8px; margin-top: 10px; }
+        .custom-popup img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
+        .custom-popup p { margin: 5px 0 0 0; font-size: 14px; color: #444; }
         
-        /* Toast Notification */
-        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 30px; z-index: 3000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        /* Toast Notification moderna al posto degli alert */
+        #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.85); color: white; padding: 12px 24px; border-radius: 30px; z-index: 3000; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
@@ -40,13 +41,15 @@
     <div id="report-panel">
         <div class="panel-header">
             <h2>Nuova Segnalazione</h2>
-            <button onclick="closePanel()" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
+            <button onclick="closePanel()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#666;">&times;</button>
         </div>
+        
         <div class="form-group">
-            <input type="text" id="address-input" placeholder="Indirizzo...">
+            <input type="text" id="address-input" placeholder="Indirizzo o luogo...">
             <button class="btn-secondary" onclick="searchAddress()">Cerca sulla mappa</button>
-            <button class="btn-secondary" onclick="useGPS()">Usa GPS</button>
+            <button class="btn-secondary" onclick="useGPS()">Usa la mia posizione GPS</button>
         </div>
+        
         <div class="form-group">
             <input type="file" id="image-input" accept="image/*" capture="environment">
         </div>
@@ -61,52 +64,139 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <script>
-        const firebaseConfig = { /* ... il tuo config ... */ };
+        const firebaseConfig = {
+            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnV3E",
+            authDomain: "palermofix-9cae9.firebaseapp.com",
+            projectId: "palermofix-9cae9",
+            storageBucket: "palermofix-9cae9.firebasestorage.app",
+            messagingSenderId: "308048759174",
+            appId: "1:308048759174:web:86d9f1773885a288b3c407"
+        };
+
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         var map = L.map('map').setView([38.1157, 13.3615], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
-        // Funzione Toast moderna
+        let marker;
+        let selectedCoords = null;
+
+        // Gestione notifiche Toast (moderne, niente alert anni '90)
         function showToast(msg) {
             const t = document.getElementById('toast');
             t.innerText = msg;
             t.style.opacity = 1;
-            setTimeout(() => t.style.opacity = 0, 3000);
+            setTimeout(() => { t.style.opacity = 0; }, 3000);
         }
 
         function loadApprovedMarkers() {
-            db.collection("segnalazioni").where("stato", "==", "approvata").get().then((snapshot) => {
-                snapshot.forEach((doc) => {
-                    const d = doc.data();
-                    if (d.lat && d.lng) {
+            db.collection("segnalazioni").where("stato", "==", "approvata").get().then((querySnapshot) => {
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.lat && data.lng) {
                         const content = `
                             <div class="custom-popup">
                                 <b>Segnalazione</b>
-                                <p>${d.descrizione || 'Nessuna descrizione'}</p>
-                                ${d.foto ? `<img src="${d.foto}">` : ''}
-                            </div>`;
-                        L.marker([d.lat, d.lng]).addTo(map).bindPopup(content);
+                                <p>${data.descrizione || 'Nessuna descrizione'}</p>
+                                ${data.foto ? `<img src="${data.foto}">` : ''}
+                            </div>
+                        `;
+                        L.marker([data.lat, data.lng]).addTo(map).bindPopup(content);
                     }
                 });
-            });
+            }).catch((error) => console.error("Errore nel caricamento: ", error));
         }
 
         loadApprovedMarkers();
-        
-        // ... (restano invariate le funzioni openPanel, closePanel, setMarker, useGPS, searchAddress) ...
+
+        function openPanel() { document.getElementById('report-panel').classList.add('active'); }
+        function closePanel() { document.getElementById('report-panel').classList.remove('active'); }
+
+        function setMarker(lat, lng) {
+            map.setView([lat, lng], 16);
+            if (marker) map.removeLayer(marker);
+            marker = L.marker([lat, lng], {draggable: true}).addTo(map);
+            marker.bindPopup("Posizione segnalazione").openPopup();
+            selectedCoords = { lat: lat, lng: lng };
+            marker.on('dragend', function(e) {
+                var pos = marker.getLatLng();
+                selectedCoords = { lat: pos.lat, lng: pos.lng };
+            });
+        }
+
+        function useGPS() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => setMarker(pos.coords.latitude, pos.coords.longitude),
+                    err => showToast("Impossibile recuperare il GPS.")
+                );
+            }
+        }
+
+        function searchAddress() {
+            const query = document.getElementById('address-input').value;
+            if(!query) return;
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Palermo`)
+                .then(r => r.json())
+                .then(d => { if(d.length > 0) setMarker(parseFloat(d[0].lat), parseFloat(d[0].lon)); else showToast("Indirizzo non trovato."); });
+        }
 
         async function submitReport() {
-            if (!selectedCoords) { showToast("Seleziona una posizione prima!"); return; }
-            
-            // ... (logica invio invariata) ...
-            
+            if (!selectedCoords) { showToast("Seleziona una posizione sulla mappa!"); return; }
+
+            const description = document.getElementById('desc-input').value;
+            const imageInput = document.getElementById('image-input');
+            let imageDataUrl = "";
+
+            if (imageInput.files && imageInput.files[0]) {
+                const file = imageInput.files[0];
+                
+                imageDataUrl = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const MAX_WIDTH = 800;
+                            const scaleSize = MAX_WIDTH / img.width;
+                            
+                            canvas.width = scaleSize < 1 ? MAX_WIDTH : img.width;
+                            canvas.height = scaleSize < 1 ? img.height * scaleSize : img.height;
+
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            
+                            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                            resolve(compressedDataUrl);
+                        };
+                        img.onerror = () => resolve("");
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = () => resolve("");
+                    reader.readAsDataURL(file);
+                });
+            }
+
             try {
-                await db.collection("segnalazioni").add({ /* ... dati ... */ });
-                showToast("Segnalazione inviata con successo!");
+                await db.collection("segnalazioni").add({
+                    lat: selectedCoords.lat,
+                    lng: selectedCoords.lng,
+                    descrizione: description,
+                    foto: imageDataUrl,
+                    stato: "aperta",
+                    dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                showToast('Segnalazione inviata con successo!');
+                document.getElementById('desc-input').value = '';
+                document.getElementById('image-input').value = '';
+                document.getElementById('address-input').value = '';
+                if (marker) map.removeLayer(marker);
+                selectedCoords = null;
                 closePanel();
             } catch (error) {
+                console.error("Errore durante il salvataggio: ", error);
                 showToast("Errore durante l'invio.");
             }
         }
