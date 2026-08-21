@@ -164,13 +164,15 @@
             return Math.random().toString(36).substring(2, 8).toUpperCase();
         }
 
-        // Carica ESCLUSIVAMENTE le segnalazioni approvate per la mappa pubblica
+        // Carica le segnalazioni gestendo anche la retrocompatibilità con i vecchi pin
         function loadMarkers() {
             markersLayer.clearLayers();
-            db.collection("segnalazioni").where("stato", "==", "approvata").get().then((querySnapshot) => {
+            db.collection("segnalazioni").get().then((querySnapshot) => {
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    if (data.lat && data.lng) {
+                    const stato = data.stato || "approvata"; // Retrocompatibilità: se manca lo stato, consideralo valido
+
+                    if (stato !== "chiusa" && stato !== "in_attesa" && data.lat && data.lng) {
                         const content = `
                             <div class="custom-popup">
                                 <b>Segnalazione</b>
@@ -207,7 +209,12 @@
                 showToast("Segnalazione risolta con successo!");
                 document.getElementById('closure-code-input').value = '';
                 closePanel('close-panel');
-                loadMarkers();
+                
+                // Attende un istante per dare tempo a Firestore di aggiornarsi e rimuove il pin all'istante
+                setTimeout(() => {
+                    loadMarkers();
+                }, 500);
+
             } catch (error) {
                 console.error("Errore durante la chiusura: ", error);
                 showToast("Errore durante l'operazione.");
@@ -328,7 +335,6 @@
             const closureCode = generateCode();
 
             try {
-                // STATO IMPOSTATO A "in_attesa" PER RIPRISTINARE LA MODERAZIONE
                 await db.collection("segnalazioni").add({
                     lat: selectedCoords.lat,
                     lng: selectedCoords.lng,
