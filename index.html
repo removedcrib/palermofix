@@ -19,16 +19,17 @@
         
         .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .form-group { margin-bottom: 15px; position: relative; }
-        input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
         .btn-secondary { background: #f39c12; color: white; border: none; padding: 10px; border-radius: 8px; margin-top: 5px; cursor: pointer; width: 100%; }
         
         .privacy-note { font-size: 12px; color: #e74c3c; margin-top: 4px; line-height: 1.3; }
+        .hint-text { font-size: 12px; color: #666; margin-top: 4px; }
 
         /* Stile per i suggerimenti indirizzo (Autocomplete) */
         #suggestions-list {
             position: absolute; top: 100%; left: 0; right: 0; background: white;
             border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px;
-            max-height: 150px; overflow-y: auto; z-index: 2100; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-height: 180px; overflow-y: auto; z-index: 2100; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             text-align: left; display: none;
         }
         .suggestion-item { padding: 10px 12px; font-size: 14px; cursor: pointer; border-bottom: 1px solid #f1f1f1; color: #333; }
@@ -62,11 +63,11 @@
         <img id="zoomed-img" src="">
     </div>
 
-    <!-- Modale Codice di Chiusura -->
+    <!-- Modale Codice di Chiudura/Invio -->
     <div id="code-modal">
         <div class="modal-content">
             <h3>Segnalazione Inviata!</h3>
-            <p style="font-size: 14px; color: #666;">Conserva questo codice segreto. Ti servirà se vorrai chiudere la segnalazione in futuro:</p>
+            <p style="font-size: 14px; color: #666;">La tua segnalazione è in attesa di moderazione. Conserve questo codice segreto per poterla chiudere in futuro:</p>
             <div class="code-box" id="display-closure-code">------</div>
             <button class="btn-main" style="padding: 12px; font-size: 15px;" onclick="closeCodeModal()">Ho capito e salvato</button>
         </div>
@@ -85,9 +86,10 @@
         </div>
         
         <div class="form-group">
-            <input type="text" id="address-input" placeholder="Scrivi l'indirizzo a Palermo..." autocomplete="off">
+            <input type="text" id="address-input" placeholder="Cerca via o piazza a Palermo..." autocomplete="off">
             <div id="suggestions-list"></div>
             <button class="btn-secondary" onclick="useGPS()">Usa la mia posizione GPS</button>
+            <div class="hint-text">💡 Suggerimento: puoi trascinare il pin sulla mappa per posizionarlo esattamente davanti al civico corretto.</div>
         </div>
         
         <div class="form-group">
@@ -96,7 +98,7 @@
         </div>
         
         <div class="form-group">
-            <textarea id="desc-input" placeholder="Descrizione..." rows="3"></textarea>
+            <textarea id="desc-input" placeholder="Descrizione del problema..." rows="3"></textarea>
         </div>
         <button class="btn-main" onclick="submitReport()" style="width:100%; max-width:none;">Invia Segnalazione</button>
     </div>
@@ -162,15 +164,16 @@
             return Math.random().toString(36).substring(2, 8).toUpperCase();
         }
 
+        // Carica ESCLUSIVAMENTE le segnalazioni approvate per la mappa pubblica
         function loadMarkers() {
             markersLayer.clearLayers();
-            db.collection("segnalazioni").where("stato", "==", "aperta").get().then((querySnapshot) => {
+            db.collection("segnalazioni").where("stato", "==", "approvata").get().then((querySnapshot) => {
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     if (data.lat && data.lng) {
                         const content = `
                             <div class="custom-popup">
-                                <b>Segnalazione Aperta</b>
+                                <b>Segnalazione</b>
                                 <p>${data.descrizione || 'Nessuna descrizione'}</p>
                                 ${data.foto ? `<img src="${data.foto}" onclick="zoomImage('${data.foto}')" title="Clicca per ingrandire">` : ''}
                             </div>
@@ -191,14 +194,13 @@
             }
 
             try {
-                const snapshot = await db.collection("segnalazioni").where("codiceChiusura", "==", inputCode).where("stato", "==", "aperta").get();
+                const snapshot = await db.collection("segnalazioni").where("codiceChiusura", "==", inputCode).get();
                 
                 if (snapshot.empty) {
-                    showToast("Codice non valido o segnalazione già chiusa.");
+                    showToast("Codice non valido.");
                     return;
                 }
 
-                // Prendi il primo documento corrispondente e chiudilo
                 const docId = snapshot.docs[0].id;
                 await db.collection("segnalazioni").doc(docId).update({ stato: "chiusa" });
 
@@ -225,7 +227,7 @@
             map.setView([lat, lng], 16);
             if (marker) map.removeLayer(marker);
             marker = L.marker([lat, lng], {draggable: true}).addTo(map);
-            marker.bindPopup("Posizione segnalazione").openPopup();
+            marker.bindPopup("Trascina il pin sul punto esatto").openPopup();
             selectedCoords = { lat: lat, lng: lng };
             marker.on('dragend', function(e) {
                 var pos = marker.getLatLng();
@@ -256,7 +258,7 @@
             }
 
             searchTimeout = setTimeout(() => {
-                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Palermo`)
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Palermo, Italia`)
                     .then(r => r.json())
                     .then(data => {
                         suggestionsList.innerHTML = '';
@@ -326,12 +328,13 @@
             const closureCode = generateCode();
 
             try {
+                // STATO IMPOSTATO A "in_attesa" PER RIPRISTINARE LA MODERAZIONE
                 await db.collection("segnalazioni").add({
                     lat: selectedCoords.lat,
                     lng: selectedCoords.lng,
                     descrizione: description,
                     foto: imageDataUrl,
-                    stato: "aperta",
+                    stato: "in_attesa",
                     codiceChiusura: closureCode,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
@@ -345,7 +348,6 @@
                 if (marker) map.removeLayer(marker);
                 selectedCoords = null;
                 closePanel('report-panel');
-                loadMarkers();
             } catch (error) {
                 console.error("Errore durante il salvataggio: ", error);
                 showToast("Errore durante l'invio.");
