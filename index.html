@@ -312,7 +312,7 @@
         <button class="btn-main" onclick="submitReport()" style="width:100%; max-width:none; margin-top: 4px;">Invia Segnalazione</button>
     </div>
 
-    <!-- Pannello Informativa Privacy (GDPR) -->
+    <!-- Pannello Informativa Privacy (GDPR) con Firma Personalizzata -->
     <div id="privacy-modal" class="slide-panel">
         <div class="panel-header">
             <h2>Informativa Privacy</h2>
@@ -328,6 +328,20 @@
             <p><b>4. Conservazione dei Dati</b><br>I dati rimangono visibili sulla mappa pubblica fino alla loro risoluzione o cancellazione tramite il codice segreto assegnato all'utente. Non viene effettuata alcuna profilazione commerciale né cessione a terzi.</p>
             
             <p><b>5. Diritti dell'Utente</b><br>Puoi richiedere la cancellazione immediata di una segnalazione utilizzando il tuo codice di chiusura o contattando il supporto del progetto.</p>
+            
+            <hr style="border: 0; border-top: 1px solid rgba(0,0,0,0.08); margin: 20px 0;">
+            
+            <!-- FIRMA PERSONALIZZATA -->
+            <div style="text-align: center; padding: 5px 0 10px 0;">
+                <p style="font-size: 11px; color: #777; font-style: italic; margin-bottom: 6px;">Progetto sviluppato da</p>
+                <h3 style="font-size: 20px; font-weight: 800; letter-spacing: 3px; margin: 0; line-height: 1;">
+                    <span style="color: #1d3557;">A.N.</span><span style="color: #ff6b35;">O.N.</span>
+                </h3>
+                <p style="font-size: 10px; color: #aaa; margin: 6px 0 10px 0;">© 2026</p>
+                <a href="mailto:hi@palermofix.it" style="display: inline-block; color: var(--primary); font-size: 12px; font-weight: 700; text-decoration: none; border: 1.5px solid var(--primary); padding: 5px 14px; border-radius: 20px; background: rgba(255, 107, 53, 0.04);">
+                    ✉️ hi@palermofix.it
+                </a>
+            </div>
         </div>
         <button class="btn-main" onclick="closePanel('privacy-modal')" style="width: 100%; max-width: none; margin-top: 15px;">Ho capito</button>
     </div>
