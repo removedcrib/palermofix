@@ -51,15 +51,11 @@
         <button class="btn-main" onclick="submitReport()">Invia Segnalazione</button>
     </div>
 
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <!-- Firebase SDKs (Modulo compatibile con script classici) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <script>
-        // Configurazione Firebase con le tue chiavi
         const firebaseConfig = {
             apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnV3E",
             authDomain: "palermofix-9cae9.firebaseapp.com",
@@ -69,7 +65,6 @@
             appId: "1:308048759174:web:86d9f1773885a288b3c407"
         };
 
-        // Inizializzazione Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
@@ -77,24 +72,20 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
         let marker;
-        let selectedCoords = null; // Memorizza le coordinate corrette del pin
+        let selectedCoords = null;
 
-        // Funzione per caricare e mostrare sulla mappa solo le segnalazioni approvate
         function loadApprovedMarkers() {
             db.collection("segnalazioni").where("stato", "==", "approvata").get().then((querySnapshot) => {
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     if (data.lat && data.lng) {
                         L.marker([data.lat, data.lng]).addTo(map)
-                          .bindPopup(`<b>Segnalazione</b><br>${data.descrizione || 'Nessuna descrizione'}`);
+                         .bindPopup(`<b>Segnalazione</b><br>${data.descrizione || 'Nessuna descrizione'}`);
                     }
                 });
-            }).catch((error) => {
-                console.error("Errore nel caricamento delle segnalazioni: ", error);
-            });
+            }).catch((error) => console.error("Errore nel caricamento: ", error));
         }
 
-        // Carica i marker all'avvio della pagina
         loadApprovedMarkers();
 
         function openPanel() { document.getElementById('report-panel').classList.add('active'); }
@@ -103,16 +94,12 @@
         function setMarker(lat, lng) {
             map.setView([lat, lng], 16);
             if (marker) map.removeLayer(marker);
-            
             marker = L.marker([lat, lng], {draggable: true}).addTo(map);
-            marker.bindPopup("Posizione segnalazione (puoi trascinarla)").openPopup();
-            
+            marker.bindPopup("Posizione segnalazione").openPopup();
             selectedCoords = { lat: lat, lng: lng };
-
-            // Aggiorna le coordinate se l'utente trascina il pin sulla mappa
-            marker.on('dragend', function(event) {
-                var position = marker.getLatLng();
-                selectedCoords = { lat: position.lat, lng: position.lng };
+            marker.on('dragend', function(e) {
+                var pos = marker.getLatLng();
+                selectedCoords = { lat: pos.lat, lng: pos.lng };
             });
         }
 
@@ -120,70 +107,66 @@
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     pos => setMarker(pos.coords.latitude, pos.coords.longitude),
-                    err => alert("Impossibile recuperare la posizione GPS.")
+                    err => alert("Impossibile recuperare il GPS.")
                 );
-            } else { alert("GPS non supportato dal browser."); }
+            }
         }
 
         function searchAddress() {
             const query = document.getElementById('address-input').value;
-            if(!query) { alert("Inserisci un indirizzo valido."); return; }
-            
+            if(!query) return;
             fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Palermo`)
                 .then(r => r.json())
-                .then(d => {
-                    if (d.length > 0) {
-                        setMarker(parseFloat(d[0].lat), parseFloat(d[0].lon));
-                    } else {
-                        alert("Indirizzo non trovato.");
-                    }
-                })
-                .catch(e => alert("Errore durante la ricerca dell'indirizzo."));
+                .then(d => { if(d.length > 0) setMarker(parseFloat(d[0].lat), parseFloat(d[0].lon)); else alert("Non trovato."); });
         }
 
         async function submitReport() {
-            if (!selectedCoords) {
-                alert("Seleziona prima una posizione sulla mappa (tramite GPS o Indirizzo).");
-                return;
-            }
+            if (!selectedCoords) { alert("Seleziona una posizione."); return; }
 
             const description = document.getElementById('desc-input').value;
             const imageInput = document.getElementById('image-input');
-            
             let imageDataUrl = "";
 
-            // Se l'utente ha caricato una foto, la convertiamo in Base64 per poterla salvare e visualizzare nell'admin
             if (imageInput.files && imageInput.files[0]) {
                 const file = imageInput.files[0];
+                console.log("File trovato:", file.name, "Dimensione:", file.size);
+                
                 imageDataUrl = await new Promise((resolve) => {
                     const reader = new FileReader();
-                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onload = (e) => {
+                        console.log("FileReader completato con successo!");
+                        resolve(e.target.result);
+                    };
+                    reader.onerror = (err) => {
+                        console.error("Errore FileReader:", err);
+                        resolve("");
+                    };
                     reader.readAsDataURL(file);
                 });
+            } else {
+                console.log("Nessun file selezionato.");
             }
             
+            console.log("Stringa Base64 pronta (primi 50 caratteri):", imageDataUrl.substring(0, 50));
+
             try {
-                // Salvataggio nel database Firestore nella collezione "segnalazioni" con la foto inclusa
                 await db.collection("segnalazioni").add({
                     lat: selectedCoords.lat,
                     lng: selectedCoords.lng,
                     descrizione: description,
                     foto: imageDataUrl,
-                    stato: "aperta", // Stato iniziale (richiede approvazione da admin.html)
+                    stato: "aperta",
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
-
-                alert('Segnalazione inviata con successo! Sarà visibile sulla mappa dopo l\'approvazione.');
+                alert('Segnalazione inviata!');
                 document.getElementById('desc-input').value = '';
-                document.getElementById('address-input').value = '';
                 document.getElementById('image-input').value = '';
                 if (marker) map.removeLayer(marker);
                 selectedCoords = null;
                 closePanel();
-                
             } catch (error) {
                 console.error("Errore durante il salvataggio: ", error);
-                alert("Errore durante l'invio della segnalazione.");
+                alert("Errore durante l'invio.");
             }
         }
     </script>
