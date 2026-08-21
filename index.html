@@ -9,7 +9,7 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="text/javascript">
         (function() {
-            emailjs.init("gnuXTpivricKH33Ni"); // Sostituisci con la tua Public Key di EmailJS
+            emailjs.init("TUA_PUBLIC_KEY"); // Sostituisci con la tua Public Key di EmailJS
         })();
     </script>
     <style>
@@ -172,7 +172,6 @@
             </select>
         </div>
 
-        <!-- Campo Email aggiunto -->
         <div class="form-group">
             <input type="email" id="email-input" placeholder="Tua email (per ricevere il codice)" required>
             <div class="hint-text">✉️ Inserisci la tua email per ricevere il codice segreto di sblocco/chiusura.</div>
@@ -258,7 +257,6 @@
                     const data = doc.data();
                     const stato = data.stato || "in_attesa";
 
-                    // Mostra sulla mappa SOLO le segnalazioni che hanno stato "approvata"
                     if (stato === "approvata" && data.lat && data.lng) {
                         let pinColor = "#ff6b35"; 
                         switch(data.tipoRifiuto) {
@@ -454,7 +452,6 @@
             const closureCode = generateCode();
 
             try {
-                // 1. Salvataggio su Firestore
                 await db.collection("segnalazioni").add({
                     indirizzoManuale: addressText,
                     tipoRifiuto: tipoRifiuto,
@@ -463,14 +460,12 @@
                     lng: selectedCoords.lng,
                     descrizione: description,
                     foto: imageDataUrl,
-                    stato: "in_attesa", // Richiede approvazione manuale per comparire sulla mappa
+                    stato: "in_attesa",
                     codiceChiusura: closureCode,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                // 2. Invio email tramite EmailJS
-                // Ricordati di configurare un template su EmailJS con questi parametri: user_email, closure_code, report_type
-                emailjs.send("service_00o5cml", "template_0sfzma5", {
+                emailjs.send("TUO_SERVICE_ID", "TUO_TEMPLATE_ID", {
                     user_email: emailText,
                     closure_code: closureCode,
                     report_type: tipoRifiuto
@@ -480,11 +475,9 @@
                     console.error("Errore nell'invio email:", error);
                 });
 
-                // 3. Mostra modale con il codice a schermo
                 document.getElementById('display-closure-code').innerText = closureCode;
                 document.getElementById('code-modal').style.display = 'flex';
 
-                // 4. Reset dei campi
                 document.getElementById('address-input').value = '';
                 document.getElementById('tipo-rifiuto-input').value = '';
                 document.getElementById('email-input').value = '';
