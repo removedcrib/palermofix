@@ -3,36 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Palermo Fix - Admin</title>
+    <title>Palermo Fix - Dashboard Amministrativa</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f4f7f6; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        :root {
+            --primary: #e67e22;
+            --primary-hover: #d35400;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --dark: #2c3e50;
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --gray: #7f8c8d;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 20px; }
+
+        .container { max-width: 800px; margin: 0 auto; }
+
+        /* Login Box Professionale */
+        #login-box {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            max-width: 400px;
+            margin: 80px auto;
+            text-align: center;
+        }
+        #login-box h1 { color: var(--dark); margin-bottom: 8px; font-size: 24px; }
+        #login-box p { color: var(--gray); font-size: 14px; margin-bottom: 24px; }
+        .input-group { margin-bottom: 16px; text-align: left; }
+        .input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--dark); margin-bottom: 6px; }
+        input[type="email"], input[type="password"] {
+            width: 100%; padding: 12px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; transition: border-color 0.2s;
+        }
+        input:focus { outline: none; border-color: var(--primary); }
+
+        /* Pannello Admin */
         #admin-content { display: none; }
-        .report-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 8px; background: #fafafa; }
-        .report-img { max-width: 100%; height: auto; border-radius: 6px; margin-top: 10px; max-height: 250px; display: block; }
-        .actions { display: flex; gap: 10px; margin-top: 15px; }
-        button { padding: 10px 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
-        .btn-approve { background: #27ae60; color: white; flex: 1; }
-        .btn-delete { background: #e74c3c; color: white; flex: 1; }
+        .dashboard-header {
+            display: flex; justify-content: space-between; align-items: center; background: var(--card-bg);
+            padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 25px;
+        }
+        .dashboard-header h1 { font-size: 20px; color: var(--dark); display: flex; align-items: center; gap: 10px; }
+        .badge-count { background: #f39c1220; color: var(--primary); padding: 4px 10px; border-radius: 20px; font-size: 14px; font-weight: bold; }
+
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-logout { background: #eef2f3; color: var(--gray); }
+        .btn-logout:hover { background: #dcdde1; color: var(--dark); }
+
+        /* Griglia Card Segnalazioni */
+        .reports-grid { display: grid; gap: 20px; }
+        .report-card {
+            background: var(--card-bg); border-radius: 12px; padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 12px;
+            border-left: 5px solid var(--primary); animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .report-info { display: flex; gap: 20px; align-items: flex-start; }
+        .report-img-wrapper { flex-shrink: 0; width: 120px; height: 120px; border-radius: 8px; overflow: hidden; background: #eee; cursor: pointer; }
+        .report-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s; }
+        .report-img:hover { transform: scale(1.05); }
+        
+        .report-details { flex-grow: 1; }
+        .report-details h3 { font-size: 15px; color: var(--dark); margin-bottom: 6px; }
+        .report-details p { font-size: 14px; color: #555; }
+        .no-photo { font-style: italic; color: var(--gray); font-size: 13px; display: flex; align-items: center; justify-content: center; height: 100%; }
+
+        .actions { display: flex; gap: 10px; margin-top: 5px; }
+        .btn-approve { background: var(--success); color: white; flex: 1; }
+        .btn-approve:hover { background: #219653; }
+        .btn-delete { background: var(--danger); color: white; flex: 1; }
+        .btn-delete:hover { background: #c0392b; }
+
+        .empty-state { text-align: center; padding: 50px 20px; background: var(--card-bg); border-radius: 12px; color: var(--gray); box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+
+        /* Toast / Notifiche eleganti */
+        #toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(44, 62, 80, 0.95); color: white; padding: 12px 24px;
+            border-radius: 30px; z-index: 3000; opacity: 0; transition: opacity 0.3s ease;
+            pointer-events: none; font-size: 14px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
 
+    <div id="toast"></div>
+
     <div class="container">
         <!-- LOGIN -->
         <div id="login-box">
-            <h1>Login Admin</h1>
-            <input type="email" id="email" placeholder="Email"><br><br>
-            <input type="password" id="pass" placeholder="Password"><br><br>
-            <button onclick="login()">Accedi</button>
+            <h1>Palermo Fix</h1>
+            <p>Accesso Area Amministrativa</p>
+            <div class="input-group">
+                <label>Email Amministratore</label>
+                <input type="email" id="email" placeholder="admin@palermofix.it">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="pass" placeholder="••••••••">
+            </div>
+            <button class="btn btn-primary" onclick="login()">Accedi alla Dashboard</button>
         </div>
 
-        <!-- PANNELLO -->
+        <!-- PANNELLO PRINCIPALE -->
         <div id="admin-content">
-            <h1>Segnalazioni in attesa</h1>
-            <div id="pending-list"></div>
-            <br>
-            <button onclick="firebase.auth().signOut().then(() => location.reload())" style="background: #7f8c8d; color: white; width: 100%;">Esci</button>
+            <div class="dashboard-header">
+                <h1>📋 Segnalazioni in attesa <span class="badge-count" id="count-badge">0</span></h1>
+                <button class="btn btn-logout" onclick="logout()">Esci</button>
+            </div>
+            
+            <div id="pending-list" class="reports-grid">
+                <!-- Verranno inserite dinamicamente -->
+            </div>
         </div>
     </div>
 
@@ -55,50 +144,78 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        // Mantiene la sessione attiva anche dopo il refresh della pagina
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.opacity = 1;
+            setTimeout(() => { t.style.opacity = 0; }, 3000);
+        }
+
+        // Mantiene la sessione attiva e previene il logout accidentale al refresh
         auth.onAuthStateChanged(user => {
             if (user) {
-                // Utente già loggato: nasconde il login e mostra il pannello
                 document.getElementById('login-box').style.display = 'none';
                 document.getElementById('admin-content').style.display = 'block';
                 loadReports();
             } else {
-                // Utente non loggato: mostra la schermata di login
                 document.getElementById('login-box').style.display = 'block';
                 document.getElementById('admin-content').style.display = 'none';
             }
         });
 
         function login() {
-            const email = document.getElementById('email').value;
-            const pass = document.getElementById('pass').value;
+            const email = document.getElementById('email').value.trim();
+            const pass = document.getElementById('pass').value.trim();
             
+            if(!email || !pass) {
+                showToast("Inserisci email e password.");
+                return;
+            }
+
             auth.signInWithEmailAndPassword(email, pass)
-                .catch(e => alert("Login fallito: " + e.message));
+                .catch(e => showToast("Errore login: " + e.message));
+        }
+
+        function logout() {
+            auth.signOut().catch(e => console.error(e));
         }
 
         function loadReports() {
-            // Modificato da "aperta" a "in_attesa" per intercettare correttamente le nuove segnalazioni
             db.collection("segnalazioni").where("stato", "==", "in_attesa").onSnapshot(snapshot => {
                 const list = document.getElementById('pending-list');
+                const badge = document.getElementById('count-badge');
                 list.innerHTML = '';
                 
+                badge.innerText = snapshot.size;
+
                 if (snapshot.empty) {
-                    list.innerHTML = '<p style="text-align:center; color:#7f8c8d;">Nessuna segnalazione in attesa.</p>';
+                    list.innerHTML = `
+                        <div class="empty-state">
+                            <h3>Ottimo lavoro! 🎉</h3>
+                            <p>Non ci sono segnalazioni in attesa di moderazione al momento.</p>
+                        </div>`;
                     return;
                 }
 
                 snapshot.forEach(doc => {
                     const d = doc.data();
-                    const imgHtml = d.foto ? `<img src="${d.foto}" class="report-img">` : `<p style="color:#7f8c8d; font-size:13px;">Nessuna foto allegata.</p>`;
+                    
+                    const imgHtml = d.foto 
+                        ? `<div class="report-img-wrapper" onclick="window.open('${d.foto}', '_blank')"><img src="${d.foto}" class="report-img" title="Clicca per ingrandire"></div>` 
+                        : `<div class="report-img-wrapper"><div class="no-photo">Nessuna foto</div></div>`;
                     
                     list.innerHTML += `
                         <div class="report-card">
-                            <p><b>Descrizione:</b> ${d.descrizione || 'Nessuna descrizione'}</p>
-                            ${imgHtml}
+                            <div class="report-info">
+                                ${imgHtml}
+                                <div class="report-details">
+                                    <h3>Dettagli Segnalazione</h3>
+                                    <p>${d.descrizione || '<span style="color:#aaa;">Nessuna descrizione fornita.</span>'}</p>
+                                </div>
+                            </div>
                             <div class="actions">
-                                <button class="btn-approve" onclick="approve('${doc.id}')">Approva</button>
-                                <button class="btn-delete" onclick="deleteReport('${doc.id}')">Elimina</button>
+                                <button class="btn btn-approve" onclick="approve('${doc.id}')">Approva e Pubblica</button>
+                                <button class="btn btn-delete" onclick="deleteReport('${doc.id}')">Elimina</button>
                             </div>
                         </div>`;
                 });
@@ -107,13 +224,15 @@
 
         function approve(id) {
             db.collection("segnalazioni").doc(id).update({ stato: "approvata" })
-                .catch(e => alert("Errore durante l'approvazione: " + e.message));
+                .then(() => showToast("Segnalazione approvata con successo!"))
+                .catch(e => showToast("Errore durante l'approvazione: " + e.message));
         }
 
         function deleteReport(id) {
             if (confirm("Sei sicuro di voler eliminare definitivamente questa segnalazione?")) {
                 db.collection("segnalazioni").doc(id).delete()
-                    .catch(e => alert("Errore durante l'eliminazione: " + e.message));
+                    .then(() => showToast("Segnalazione eliminata."))
+                    .catch(e => showToast("Errore durante l'eliminazione: " + e.message));
             }
         }
     </script>
