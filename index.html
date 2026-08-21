@@ -129,25 +129,35 @@
 
             if (imageInput.files && imageInput.files[0]) {
                 const file = imageInput.files[0];
-                console.log("File trovato:", file.name, "Dimensione:", file.size);
                 
+                // Ridimensionamento automatico tramite Canvas
                 imageDataUrl = await new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.onload = (e) => {
-                        console.log("FileReader completato con successo!");
-                        resolve(e.target.result);
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const MAX_WIDTH = 800; // Ridimensiona a massimo 800px di larghezza
+                            const scaleSize = MAX_WIDTH / img.width;
+                            
+                            // Se l'immagine è già più piccola di 800px, manteniamo le dimensioni originali
+                            canvas.width = scaleSize < 1 ? MAX_WIDTH : img.width;
+                            canvas.height = scaleSize < 1 ? img.height * scaleSize : img.height;
+
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            
+                            // Comprime in formato JPEG al 70% di qualità
+                            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                            resolve(compressedDataUrl);
+                        };
+                        img.onerror = () => resolve("");
+                        img.src = e.target.result;
                     };
-                    reader.onerror = (err) => {
-                        console.error("Errore FileReader:", err);
-                        resolve("");
-                    };
+                    reader.onerror = () => resolve("");
                     reader.readAsDataURL(file);
                 });
-            } else {
-                console.log("Nessun file selezionato.");
             }
-            
-            console.log("Stringa Base64 pronta (primi 50 caratteri):", imageDataUrl.substring(0, 50));
 
             try {
                 await db.collection("segnalazioni").add({
@@ -158,9 +168,10 @@
                     stato: "aperta",
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert('Segnalazione inviata!');
+                alert('Segnalazione inviata con successo!');
                 document.getElementById('desc-input').value = '';
                 document.getElementById('image-input').value = '';
+                document.getElementById('address-input').value = '';
                 if (marker) map.removeLayer(marker);
                 selectedCoords = null;
                 closePanel();
