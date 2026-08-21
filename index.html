@@ -146,9 +146,12 @@
         </div>
         
         <div class="form-group">
-            <input type="text" id="address-input" placeholder="Cerca via / Indirizzo (es. Via Roma 15)...">
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="address-input" placeholder="Cerca via (es. Via Roma 15)...">
+                <button class="btn-secondary" style="width: auto; padding: 0 16px; margin-top: 0;" onclick="searchAddressManual()">Cerca</button>
+            </div>
             <button class="btn-secondary" onclick="useGPS()">📍 Usa la mia posizione GPS</button>
-            <div class="hint-text">💡 Inserisci l'indirizzo a mano o usa il GPS. Il pin verrà posizionato al centro della mappa e potrai trascinarlo esattamente sul posto.</div>
+            <div class="hint-text">💡 Inserisci la via e clicca "Cerca", oppure usa il GPS. Potrai comunque trascinare il pin sul punto esatto.</div>
         </div>
         
         <div class="form-group">
@@ -281,7 +284,6 @@
             document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
             document.getElementById(panelId).classList.add('active'); 
 
-            // Se apriamo il pannello di segnalazione e non c'è un pin, lo mettiamo al centro della mappa corrente
             if(panelId === 'report-panel' && !selectedCoords) {
                 const center = map.getCenter();
                 setMarkerPosition(center.lat, center.lng);
@@ -315,6 +317,31 @@
                     err => showToast("Impossibile recuperare il GPS.")
                 );
             }
+        }
+
+        function searchAddressManual() {
+            const query = document.getElementById('address-input').value.trim();
+            if (!query) {
+                showToast("Scrivi prima un indirizzo!");
+                return;
+            }
+
+            showToast("Ricerca in corso...");
+            
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Palermo`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lon = parseFloat(data[0].lon);
+                        map.setView([lat, lon], 17);
+                        setMarkerPosition(lat, lon);
+                        showToast("Trovato! Trascina il pin se serve.");
+                    } else {
+                        showToast("Indirizzo non trovato. Prova ad essere più specifico.");
+                    }
+                })
+                .catch(() => showToast("Errore di connessione."));
         }
 
         async function submitReport() {
