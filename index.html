@@ -127,7 +127,7 @@
     <div id="code-modal">
         <div class="modal-content">
             <h3>Segnalazione Inviata! 🚀</h3>
-            <p style="font-size: 13px; color: #666; line-height: 1.5;">Conserva questo codice segreto per poter chiudere la segnalazione quando il problema sarà risolto:</p>
+            <p style="font-size: 13px; color: #666; line-height: 1.5;">La tua segnalazione è stata presa in carico e sarà visibile sulla mappa non appena verrà approvata. Conserva questo codice per poterla chiudere in futuro:</p>
             <div class="code-box" id="display-closure-code">------</div>
             <button class="btn-main" style="width: 100%; max-width: none; padding: 14px;" onclick="closeCodeModal()">Ho salvato il codice</button>
         </div>
@@ -154,7 +154,6 @@
             <div class="hint-text">💡 Se il civico esatto non viene trovato, usa la ricerca per avvicinarti e <b>sposta/trascina il pin</b> direttamente sul punto preciso della mappa.</div>
         </div>
 
-        <!-- Selezione della tipologia di rifiuto -->
         <div class="form-group">
             <select id="tipo-rifiuto-input">
                 <option value="" disabled selected>Seleziona tipologia rifiuto...</option>
@@ -244,17 +243,17 @@
             db.collection("segnalazioni").get().then((querySnapshot) => {
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    const stato = data.stato || "approvata";
+                    const stato = data.stato || "in_attesa";
 
-                    if (stato !== "chiusa" && data.lat && data.lng) {
-                        // Assegna un colore mirato in base alla tipologia di rifiuto
+                    // Mostra sulla mappa SOLO le segnalazioni che hanno stato "approvata"
+                    if (stato === "approvata" && data.lat && data.lng) {
                         let pinColor = "#ff6b35"; 
                         switch(data.tipoRifiuto) {
-                            case "Micro-discarica / Sacchi abbandonati": pinColor = "#e63946"; break; // Rosso vivo
-                            case "Cassonetti saturi o traboccanti": pinColor = "#ffb703"; break; // Arancione
-                            case "Abbandono rifiuti ingombranti": pinColor = "#8d6e63"; break; // Marrone
-                            case "Materiale edile e inerti": pinColor = "#d4a373"; break; // Mattone
-                            case "Sfalci di potatura e verde": pinColor = "#2ec4b6"; break; // Verde
+                            case "Micro-discarica / Sacchi abbandonati": pinColor = "#e63946"; break;
+                            case "Cassonetti saturi o traboccanti": pinColor = "#ffb703"; break;
+                            case "Abbandono rifiuti ingombranti": pinColor = "#8d6e63"; break;
+                            case "Materiale edile e inerti": pinColor = "#d4a373"; break;
+                            case "Sfalci di potatura e verde": pinColor = "#2ec4b6"; break;
                         }
 
                         const content = `
@@ -265,7 +264,6 @@
                             </div>
                         `;
                         
-                        // Utilizziamo un marker circolare stilizzato colorato
                         L.circleMarker([data.lat, data.lng], {
                             radius: 9,
                             fillColor: pinColor,
@@ -444,7 +442,7 @@
                     lng: selectedCoords.lng,
                     descrizione: description,
                     foto: imageDataUrl,
-                    stato: "approvata",
+                    stato: "in_attesa", // IMPOSTATO SU IN_ATTESA: Richiede la tua approvazione manuale per comparire sulla mappa
                     codiceChiusura: closureCode,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
