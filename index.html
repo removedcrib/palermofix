@@ -10,31 +10,47 @@
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, sans-serif; overflow: hidden; }
         #map { height: 100vh; width: 100vw; z-index: 1; }
         
-        #ui-overlay { position: absolute; bottom: 20px; left: 0; right: 0; z-index: 1000; padding: 0 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .btn-main { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 50px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 100%; max-width: 400px; cursor: pointer; }
+        #ui-overlay { position: absolute; bottom: 30px; left: 0; right: 0; z-index: 1000; padding: 0 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .btn-main { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 50px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 100%; max-width: 400px; cursor: pointer; transition: transform 0.1s; }
+        .btn-main:active { transform: scale(0.98); }
         .btn-alt { background: #27ae60; }
         
-        /* Gestione degli stati del pannello: default attivo (85vh), oppure ridotto (active-half) per vedere la mappa */
-        .slide-panel { position: fixed; bottom: -100%; left: 0; right: 0; height: 85vh; background: white; border-radius: 20px 20px 0 0; z-index: 2000; transition: bottom 0.3s ease-out, height 0.3s ease-out; padding: 20px; box-sizing: border-box; overflow-y: auto; }
-        .slide-panel.active { bottom: 0; height: 85vh; }
-        .slide-panel.active-half { bottom: 0; height: 40vh; }
+        /* Pannello centrale fluttuante (ottimizzato sia per mobile che desktop) */
+        .slide-panel { 
+            position: fixed; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%) scale(0.95); 
+            width: 90%; max-width: 480px; max-height: 85vh; 
+            background: white; border-radius: 16px; 
+            z-index: 2000; opacity: 0; pointer-events: none;
+            transition: all 0.25s ease-in-out; 
+            padding: 24px; box-sizing: border-box; overflow-y: auto; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+        .slide-panel.active { 
+            transform: translate(-50%, -50%) scale(1); 
+            opacity: 1; 
+            pointer-events: auto; 
+        }
         
-        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .form-group { margin-bottom: 15px; position: relative; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .panel-header h2 { font-size: 20px; color: var(--dark); margin: 0; }
+        .form-group { margin-bottom: 16px; position: relative; }
         input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
-        .btn-secondary { background: #f39c12; color: white; border: none; padding: 10px; border-radius: 8px; margin-top: 5px; cursor: pointer; width: 100%; }
+        input:focus, textarea:focus { outline: none; border-color: var(--primary); }
+        .btn-secondary { background: #f39c12; color: white; border: none; padding: 10px; border-radius: 8px; margin-top: 8px; cursor: pointer; width: 100%; font-weight: 600; }
         
-        .privacy-note { font-size: 12px; color: #e74c3c; margin-top: 4px; line-height: 1.3; }
-        .hint-text { font-size: 12px; color: #666; margin-top: 4px; }
+        .privacy-note { font-size: 12px; color: #e74c3c; margin-top: 6px; line-height: 1.3; }
+        .hint-text { font-size: 12px; color: #666; margin-top: 6px; }
 
         /* Stile per i suggerimenti indirizzo (Autocomplete) */
         #suggestions-list {
             position: absolute; top: 100%; left: 0; right: 0; background: white;
             border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px;
-            max-height: 180px; overflow-y: auto; z-index: 2100; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-height: 160px; overflow-y: auto; z-index: 2100; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             text-align: left; display: none;
         }
-        .suggestion-item { padding: 10px 12px; font-size: 14px; cursor: pointer; border-bottom: 1px solid #f1f1f1; color: #333; }
+        .suggestion-item { padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f1f1f1; color: #333; }
         .suggestion-item:hover { background: #f8f9fa; }
 
         /* Stile moderno per popup mappa */
@@ -71,7 +87,7 @@
             <h3>Segnalazione Inviata!</h3>
             <p style="font-size: 14px; color: #666;">La tua segnalazione è in attesa di moderazione. Conserve questo codice segreto per poterla chiudere in futuro:</p>
             <div class="code-box" id="display-closure-code">------</div>
-            <button class="btn-main" style="padding: 12px; font-size: 15px;" onclick="closeCodeModal()">Ho capito e salvato</button>
+            <button class="btn-main" style="padding: 12px; font-size: 15px; width: 100%; max-width: none;" onclick="closeCodeModal()">Ho capito e salvato</button>
         </div>
     </div>
 
@@ -88,15 +104,15 @@
         </div>
         
         <div class="form-group">
-            <input type="text" id="address-input" placeholder="Cerca via o civico a Palermo (es. Via Roma 15)..." autocomplete="off">
+            <input type="text" id="address-input" placeholder="Cerca via o civico (es. Via Roma 15)..." autocomplete="off">
             <div id="suggestions-list"></div>
             <button class="btn-secondary" onclick="useGPS()">Usa la mia posizione GPS</button>
-            <div class="hint-text">💡 Suggerimento: seleziona l'indirizzo per posizionare il pin. Il pannello si ridurrà per permetterti di trascinarlo comodamente sulla mappa.</div>
+            <div class="hint-text">💡 Seleziona l'indirizzo: la finestra si chiuderà automaticamente per permetterti di posizionare o trascinare il pin sulla mappa.</div>
         </div>
         
         <div class="form-group">
             <input type="file" id="image-input" accept="image/*" capture="environment">
-            <div class="privacy-note">⚠️ Attenzione: non includere persone o targhe di veicoli nelle foto, per motivi di privacy non potranno essere pubblicate.</div>
+            <div class="privacy-note">⚠️ Attenzione: non includere persone o targhe di veicoli nelle foto.</div>
         </div>
         
         <div class="form-group">
@@ -111,7 +127,7 @@
             <h2>Chiudi Segnalazione</h2>
             <button onclick="closePanel('close-panel')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#666;">&times;</button>
         </div>
-        <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Inserisci il codice segreto che ti è stato fornito al momento della creazione per rimuovere la segnalazione dalla mappa.</p>
+        <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Inserisci il codice segreto ricevuto alla creazione per rimuovere la segnalazione.</p>
         <div class="form-group">
             <input type="text" id="closure-code-input" placeholder="Inserisci codice (es. A1B2C3)" style="text-transform: uppercase;">
         </div>
@@ -211,9 +227,7 @@
                 document.getElementById('closure-code-input').value = '';
                 closePanel('close-panel');
                 
-                setTimeout(() => {
-                    loadMarkers();
-                }, 500);
+                setTimeout(() => { loadMarkers(); }, 500);
 
             } catch (error) {
                 console.error("Errore durante la chiusura: ", error);
@@ -222,31 +236,16 @@
         }
 
         function openPanel(panelId) { 
-            document.querySelectorAll('.slide-panel').forEach(p => {
-                p.classList.remove('active');
-                p.classList.remove('active-half');
-            });
-            const panel = document.getElementById(panelId);
-            panel.classList.add('active'); 
+            document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active'); 
         }
         
         function closePanel(panelId) { 
-            const panel = document.getElementById(panelId);
-            panel.classList.remove('active');
-            panel.classList.remove('active-half');
-        }
-
-        // Riduce il pannello a metà altezza per permettere di interagire/trascinare il pin sulla mappa
-        function minimizePanelForMap(panelId) {
-            const panel = document.getElementById(panelId);
-            panel.classList.remove('active');
-            panel.classList.add('active-half');
-            // Invalida le dimensioni della mappa per evitare bug di visualizzazione di Leaflet
-            setTimeout(() => { map.invalidateSize(); }, 300);
+            document.getElementById(panelId).classList.remove('active'); 
         }
 
         function setMarker(lat, lng) {
-            map.setView([lat, lng], 16);
+            map.setView([lat, lng], 17);
             if (marker) map.removeLayer(marker);
             marker = L.marker([lat, lng], {draggable: true}).addTo(map);
             marker.bindPopup("Trascina il pin sul punto esatto").openPopup();
@@ -256,8 +255,9 @@
                 selectedCoords = { lat: pos.lat, lng: pos.lng };
             });
 
-            // Riduce automaticamente il pannello per liberare la vista sulla mappa
-            minimizePanelForMap('report-panel');
+            // Chiude la modale per lasciare interamente visibile la mappa e permettere il trascinamento del pin
+            closePanel('report-panel');
+            showToast("Indirizzo impostato! Puoi spostare il pin sulla mappa.");
         }
 
         function useGPS() {
@@ -315,7 +315,11 @@
         });
 
         async function submitReport() {
-            if (!selectedCoords) { showToast("Seleziona una posizione sulla mappa!"); return; }
+            if (!selectedCoords) { 
+                showToast("Prima seleziona un indirizzo o usa il GPS!"); 
+                openPanel('report-panel');
+                return; 
+            }
 
             const description = document.getElementById('desc-input').value;
             const imageInput = document.getElementById('image-input');
