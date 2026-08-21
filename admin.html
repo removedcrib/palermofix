@@ -36,15 +36,14 @@
         </div>
     </div>
 
-    <!-- Firebase SDKs (Versione compatibile con script classici) -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
     <script>
-        // La tua configurazione Firebase ufficiale
         const firebaseConfig = {
-            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnv3E",
+            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnV3E",
             authDomain: "palermofix-9cae9.firebaseapp.com",
             projectId: "palermofix-9cae9",
             storageBucket: "palermofix-9cae9.firebasestorage.app",
@@ -52,26 +51,35 @@
             appId: "1:308048759174:web:86d9f1773885a288b3c407"
         };
 
-        // Inizializzazione Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const auth = firebase.auth();
+
+        // Mantiene la sessione attiva anche dopo il refresh della pagina
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // Utente già loggato: nasconde il login e mostra il pannello
+                document.getElementById('login-box').style.display = 'none';
+                document.getElementById('admin-content').style.display = 'block';
+                loadReports();
+            } else {
+                // Utente non loggato: mostra la schermata di login
+                document.getElementById('login-box').style.display = 'block';
+                document.getElementById('admin-content').style.display = 'none';
+            }
+        });
 
         function login() {
             const email = document.getElementById('email').value;
             const pass = document.getElementById('pass').value;
             
             auth.signInWithEmailAndPassword(email, pass)
-                .then(() => {
-                    document.getElementById('login-box').style.display = 'none';
-                    document.getElementById('admin-content').style.display = 'block';
-                    loadReports();
-                })
                 .catch(e => alert("Login fallito: " + e.message));
         }
 
         function loadReports() {
-            db.collection("segnalazioni").where("stato", "==", "aperta").onSnapshot(snapshot => {
+            // Modificato da "aperta" a "in_attesa" per intercettare correttamente le nuove segnalazioni
+            db.collection("segnalazioni").where("stato", "==", "in_attesa").onSnapshot(snapshot => {
                 const list = document.getElementById('pending-list');
                 list.innerHTML = '';
                 
@@ -82,7 +90,6 @@
 
                 snapshot.forEach(doc => {
                     const d = doc.data();
-                    // Mostra l'anteprima della foto se presente, altrimenti un messaggio di avviso
                     const imgHtml = d.foto ? `<img src="${d.foto}" class="report-img">` : `<p style="color:#7f8c8d; font-size:13px;">Nessuna foto allegata.</p>`;
                     
                     list.innerHTML += `
