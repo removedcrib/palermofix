@@ -20,6 +20,8 @@
         .form-group { margin-bottom: 15px; position: relative; }
         input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         .btn-secondary { background: #f39c12; color: white; border: none; padding: 10px; border-radius: 8px; margin-top: 5px; cursor: pointer; width: 100%; }
+        
+        .privacy-note { font-size: 12px; color: #e74c3c; margin-top: 4px; line-height: 1.3; }
 
         /* Stile per i suggerimenti indirizzo (Autocomplete) */
         #suggestions-list {
@@ -34,12 +36,21 @@
         /* Stile moderno per popup mappa */
         .custom-popup img { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-top: 8px; cursor: zoom-in; }
         .custom-popup p { margin: 5px 0 0 0; font-size: 14px; color: #444; }
-        
+        .close-section { margin-top: 10px; border-top: 1px dashed #ddd; padding-top: 8px; }
+        .close-section input { padding: 6px; font-size: 12px; margin-bottom: 5px; }
+        .close-section button { background: #27ae60; color: white; border: none; padding: 6px; border-radius: 4px; font-size: 12px; cursor: pointer; width: 100%; }
+
         /* Overlay Fullscreen per lo Zoom delle Foto */
         #photo-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; display: none; justify-content: center; align-items: center; cursor: zoom-out; }
         #photo-overlay img { max-width: 95%; max-height: 95%; border-radius: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); }
 
-        /* Toast Notification moderna al posto degli alert */
+        /* Modal personalizzato per mostrare il codice di chiusura */
+        #code-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9998; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; max-width: 350px; width: 100%; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+        .modal-content h3 { margin-top: 0; color: var(--dark); }
+        .code-box { background: #f8f9fa; border: 2px dashed var(--primary); padding: 12px; font-size: 22px; font-weight: bold; letter-spacing: 2px; color: var(--primary); margin: 15px 0; border-radius: 8px; user-select: all; }
+
+        /* Toast Notification */
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.85); color: white; padding: 12px 24px; border-radius: 30px; z-index: 3000; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
     </style>
 </head>
@@ -51,6 +62,16 @@
     <!-- Overlay Fullscreen per lo Zoom -->
     <div id="photo-overlay" onclick="closeZoom()">
         <img id="zoomed-img" src="">
+    </div>
+
+    <!-- Modale Codice di Chiusura -->
+    <div id="code-modal">
+        <div class="modal-content">
+            <h3>Segnalazione Inviata!</h3>
+            <p style="font-size: 14px; color: #666;">Conserva questo codice segreto. Ti servirà se vorrai chiudere la segnalazione in futuro:</p>
+            <div class="code-box" id="display-closure-code">------</div>
+            <button class="btn-main" style="padding: 12px; font-size: 15px;" onclick="closeCodeModal()">Ho capito e salvato</button>
+        </div>
     </div>
 
     <div id="ui-overlay">
@@ -71,7 +92,9 @@
         
         <div class="form-group">
             <input type="file" id="image-input" accept="image/*" capture="environment">
+            <div class="privacy-note">⚠️ Attenzione: non includere persone o targhe di veicoli nelle foto, per motivi di privacy non potranno essere pubblicate.</div>
         </div>
+        
         <div class="form-group">
             <textarea id="desc-input" placeholder="Descrizione..." rows="3"></textarea>
         </div>
@@ -100,8 +123,8 @@
 
         let marker;
         let selectedCoords = null;
+        let markersLayer = L.layerGroup().addTo(map);
 
-        // Gestione notifiche Toast
         function showToast(msg) {
             const t = document.getElementById('toast');
             t.innerText = msg;
@@ -109,7 +132,6 @@
             setTimeout(() => { t.style.opacity = 0; }, 3000);
         }
 
-        // Funzioni per lo Zoom Fullscreen dell'immagine
         function zoomImage(src) {
             document.getElementById('zoomed-img').src = src;
             document.getElementById('photo-overlay').style.display = 'flex';
@@ -119,25 +141,63 @@
             document.getElementById('photo-overlay').style.display = 'none';
         }
 
-        function loadApprovedMarkers() {
-            db.collection("segnalazioni").where("stato", "==", "approvata").get().then((querySnapshot) => {
+        function closeCodeModal() {
+            document.getElementById('code-modal').style.display = 'none';
+        }
+
+        function generateCode() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        function loadMarkers() {
+            markersLayer.clearLayers();
+            db.collection("segnalazioni").where("stato", "==", "aperta").get().then((querySnapshot) => {
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
+                    const docId = doc.id;
                     if (data.lat && data.lng) {
                         const content = `
                             <div class="custom-popup">
-                                <b>Segnalazione</b>
+                                <b>Segnalazione Aperta</b>
                                 <p>${data.descrizione || 'Nessuna descrizione'}</p>
                                 ${data.foto ? `<img src="${data.foto}" onclick="zoomImage('${data.foto}')" title="Clicca per ingrandire">` : ''}
+                                <div class="close-section">
+                                    <input type="text" id="code-${docId}" placeholder="Codice chiusura...">
+                                    <button onclick="closeReport('${docId}')">Risolvi / Chiudi</button>
+                                </div>
                             </div>
                         `;
-                        L.marker([data.lat, data.lng]).addTo(map).bindPopup(content);
+                        L.marker([data.lat, data.lng]).addTo(markersLayer).bindPopup(content);
                     }
                 });
             }).catch((error) => console.error("Errore nel caricamento: ", error));
         }
 
-        loadApprovedMarkers();
+        loadMarkers();
+
+        function closeReport(docId) {
+            const inputCode = document.getElementById(`code-${docId}`).value.trim().toUpperCase();
+            if (!inputCode) {
+                showToast("Inserisci il codice di chiusura.");
+                return;
+            }
+
+            db.collection("segnalazioni").doc(docId).get().then((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    if (data.codiceChiusura === inputCode) {
+                        db.collection("segnalazioni").doc(docId).update({ stato: "chiusa" })
+                            .then(() => {
+                                showToast("Segnalazione chiusa con successo!");
+                                map.closePopup();
+                                loadMarkers();
+                            });
+                    } else {
+                        showToast("Codice errato!");
+                    }
+                }
+            });
+        }
 
         function openPanel() { document.getElementById('report-panel').classList.add('active'); }
         function closePanel() { document.getElementById('report-panel').classList.remove('active'); }
@@ -163,7 +223,6 @@
             }
         }
 
-        // Logica Autocomplete Indirizzi
         let searchTimeout;
         const addressInput = document.getElementById('address-input');
         const suggestionsList = document.getElementById('suggestions-list');
@@ -203,7 +262,6 @@
             }, 300);
         });
 
-        // Chiude la lista se si clicca fuori
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.form-group')) {
                 suggestionsList.style.display = 'none';
@@ -246,6 +304,8 @@
                 });
             }
 
+            const closureCode = generateCode();
+
             try {
                 await db.collection("segnalazioni").add({
                     lat: selectedCoords.lat,
@@ -253,16 +313,22 @@
                     descrizione: description,
                     foto: imageDataUrl,
                     stato: "aperta",
+                    codiceChiusura: closureCode,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                showToast('Segnalazione inviata con successo!');
+                // Mostra il modale con il codice segreto
+                document.getElementById('display-closure-code').innerText = closureCode;
+                document.getElementById('code-modal').style.display = 'flex';
+
+                // Pulisci il form
                 document.getElementById('desc-input').value = '';
                 document.getElementById('image-input').value = '';
                 addressInput.value = '';
                 if (marker) map.removeLayer(marker);
                 selectedCoords = null;
                 closePanel();
+                loadMarkers();
             } catch (error) {
                 console.error("Errore durante il salvataggio: ", error);
                 showToast("Errore durante l'invio.");
