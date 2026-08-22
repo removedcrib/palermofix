@@ -10,6 +10,7 @@
             --primary-hover: #d35400;
             --success: #27ae60;
             --danger: #e74c3c;
+            --info: #2980b9;
             --dark: #2c3e50;
             --bg: #f4f7f6;
             --card-bg: #ffffff;
@@ -20,7 +21,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 20px; }
 
-        .container { max-width: 800px; margin: 0 auto; }
+        .container { max-width: 900px; margin: 0 auto; }
 
         /* Login Box Professionale */
         #login-box {
@@ -46,15 +47,24 @@
         .dashboard-header {
             display: flex; justify-content: space-between; align-items: center; background: var(--card-bg);
             padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 25px;
+            flex-wrap: wrap; gap: 15px;
         }
         .dashboard-header h1 { font-size: 20px; color: var(--dark); display: flex; align-items: center; gap: 10px; }
         .badge-count { background: #f39c1220; color: var(--primary); padding: 4px 10px; border-radius: 20px; font-size: 14px; font-weight: bold; }
+        .badge-count-active { background: #2980b920; color: var(--info); padding: 4px 10px; border-radius: 20px; font-size: 14px; font-weight: bold; }
+        
+        .header-actions { display: flex; gap: 10px; align-items: center; }
 
         .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; }
         .btn-primary { background: var(--primary); color: white; width: 100%; }
         .btn-primary:hover { background: var(--primary-hover); }
         .btn-logout { background: #eef2f3; color: var(--gray); }
         .btn-logout:hover { background: #dcdde1; color: var(--dark); }
+        .btn-export { background: var(--info); color: white; }
+        .btn-export:hover { background: #2471a3; }
+
+        /* Sezioni */
+        .section-title { font-size: 18px; color: var(--dark); margin: 30px 0 15px 0; display: flex; align-items: center; gap: 10px; }
 
         /* Griglia Card Segnalazioni */
         .reports-grid { display: grid; gap: 20px; }
@@ -63,6 +73,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 12px;
             border-left: 5px solid var(--primary); animation: fadeIn 0.3s ease;
         }
+        .report-card.active-pin { border-left-color: var(--info); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .report-info { display: flex; gap: 20px; align-items: flex-start; }
@@ -72,16 +83,18 @@
         
         .report-details { flex-grow: 1; }
         .report-details h3 { font-size: 15px; color: var(--dark); margin-bottom: 6px; }
-        .report-details p { font-size: 14px; color: #555; }
+        .report-details p { font-size: 13px; color: #555; margin-bottom: 4px; }
         .no-photo { font-style: italic; color: var(--gray); font-size: 13px; display: flex; align-items: center; justify-content: center; height: 100%; }
 
-        .actions { display: flex; gap: 10px; margin-top: 5px; }
+        .actions { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
         .btn-approve { background: var(--success); color: white; flex: 1; }
         .btn-approve:hover { background: #219653; }
         .btn-delete { background: var(--danger); color: white; flex: 1; }
         .btn-delete:hover { background: #c0392b; }
+        .btn-resolve { background: var(--dark); color: white; flex: 1; }
+        .btn-resolve:hover { background: #1a252f; }
 
-        .empty-state { text-align: center; padding: 50px 20px; background: var(--card-bg); border-radius: 12px; color: var(--gray); box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .empty-state { text-align: center; padding: 30px 20px; background: var(--card-bg); border-radius: 12px; color: var(--gray); box-shadow: 0 4px 12px rgba(0,0,0,0.03); font-size: 14px; }
 
         /* Toast / Notifiche eleganti */
         #toast {
@@ -115,13 +128,20 @@
         <!-- PANNELLO PRINCIPALE -->
         <div id="admin-content">
             <div class="dashboard-header">
-                <h1>📋 Segnalazioni in attesa <span class="badge-count" id="count-badge">0</span></h1>
-                <button class="btn btn-logout" onclick="logout()">Esci</button>
+                <h1>🛠️ Gestione Palermo Fix</h1>
+                <div class="header-actions">
+                    <button class="btn btn-export" onclick="exportCSV()">📥 Esporta CSV</button>
+                    <button class="btn btn-logout" onclick="logout()">Esci</button>
+                </div>
             </div>
             
-            <div id="pending-list" class="reports-grid">
-                <!-- Verranno inserite dinamicamente -->
-            </div>
+            <!-- Sezione 1: In Attesa -->
+            <h2 class="section-title">📋 In attesa di moderazione <span class="badge-count" id="count-pending">0</span></h2>
+            <div id="pending-list" class="reports-grid"></div>
+
+            <!-- Sezione 2: Attive sulla Mappa -->
+            <h2 class="section-title">🗺️ Segnalazioni attive sulla mappa <span class="badge-count-active" id="count-active">0</span></h2>
+            <div id="active-list" class="reports-grid"></div>
         </div>
     </div>
 
@@ -132,7 +152,7 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnv3E",
+            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnV3E",
             authDomain: "palermofix-9cae9.firebaseapp.com",
             projectId: "palermofix-9cae9",
             storageBucket: "palermofix-9cae9.firebasestorage.app",
@@ -151,7 +171,6 @@
             setTimeout(() => { t.style.opacity = 0; }, 3000);
         }
 
-        // Mantiene la sessione attiva e previene il logout accidentale al refresh
         auth.onAuthStateChanged(user => {
             if (user) {
                 document.getElementById('login-box').style.display = 'none';
@@ -181,44 +200,80 @@
         }
 
         function loadReports() {
-            db.collection("segnalazioni").where("stato", "==", "in_attesa").onSnapshot(snapshot => {
-                const list = document.getElementById('pending-list');
-                const badge = document.getElementById('count-badge');
-                list.innerHTML = '';
+            // Ascoltiamo tutte le segnalazioni per popolare entrambe le sezioni in tempo reale
+            db.collection("segnalazioni").onSnapshot(snapshot => {
+                const pendingList = document.getElementById('pending-list');
+                const activeList = document.getElementById('active-list');
+                const badgePending = document.getElementById('count-pending');
+                const badgeActive = document.getElementById('count-active');
                 
-                badge.innerText = snapshot.size;
+                pendingList.innerHTML = '';
+                activeList.innerHTML = '';
 
-                if (snapshot.empty) {
-                    list.innerHTML = `
-                        <div class="empty-state">
-                            <h3>Ottimo lavoro! 🎉</h3>
-                            <p>Non ci sono segnalazioni in attesa di moderazione al momento.</p>
-                        </div>`;
-                    return;
-                }
+                let pendingCount = 0;
+                let activeCount = 0;
 
                 snapshot.forEach(doc => {
                     const d = doc.data();
+                    const stato = d.stato || "in_attesa";
                     
                     const imgHtml = d.foto 
                         ? `<div class="report-img-wrapper" onclick="window.open('${d.foto}', '_blank')"><img src="${d.foto}" class="report-img" title="Clicca per ingrandire"></div>` 
                         : `<div class="report-img-wrapper"><div class="no-photo">Nessuna foto</div></div>`;
-                    
-                    list.innerHTML += `
-                        <div class="report-card">
-                            <div class="report-info">
-                                ${imgHtml}
-                                <div class="report-details">
-                                    <h3>Dettagli Segnalazione</h3>
-                                    <p>${d.descrizione || '<span style="color:#aaa;">Nessuna descrizione fornita.</span>'}</p>
+
+                    const dataFormatted = d.dataCreazione && d.dataCreazione.toDate ? d.dataCreazione.toDate().toLocaleString('it-IT') : 'Data non disponibile';
+
+                    if (stato === "in_attesa") {
+                        pendingCount++;
+                        pendingList.innerHTML += `
+                            <div class="report-card">
+                                <div class="report-info">
+                                    ${imgHtml}
+                                    <div class="report-details">
+                                        <h3>${d.tipoRifiuto || 'Segnalazione'}</h3>
+                                        <p><b>📍 Indirizzo:</b> ${d.indirizzoManuale || 'Non specificato'}</p>
+                                        <p><b>✉️ Email:</b> ${d.emailUtente || 'Non specificata'}</p>
+                                        <p><b>📝 Nota:</b> ${d.descrizione || 'Nessuna descrizione.'}</p>
+                                        <p style="font-size: 11px; color: #888; margin-top: 4px;">📅 Inviata il: ${dataFormatted}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="actions">
-                                <button class="btn btn-approve" onclick="approve('${doc.id}')">Approva e Pubblica</button>
-                                <button class="btn btn-delete" onclick="deleteReport('${doc.id}')">Elimina</button>
-                            </div>
-                        </div>`;
+                                <div class="actions">
+                                    <button class="btn btn-approve" onclick="approve('${doc.id}')">Approva e Pubblica</button>
+                                    <button class="btn btn-delete" onclick="deleteReport('${doc.id}')">Elimina</button>
+                                </div>
+                            </div>`;
+                    } else if (stato === "approvata") {
+                        activeCount++;
+                        activeList.innerHTML += `
+                            <div class="report-card active-pin">
+                                <div class="report-info">
+                                    ${imgHtml}
+                                    <div class="report-details">
+                                        <h3>${d.tipoRifiuto || 'Segnalazione'}</h3>
+                                        <p><b>📍 Indirizzo:</b> ${d.indirizzoManuale || 'Non specificato'}</p>
+                                        <p><b>👥 Conferme:</b> ${d.conferme || 1}</p>
+                                        <p><b>✉️ Email:</b> ${d.emailUtente || 'Non specificata'}</p>
+                                        <p><b>📝 Nota:</b> ${d.descrizione || 'Nessuna descrizione.'}</p>
+                                        <p style="font-size: 11px; color: #888; margin-top: 4px;">📅 Pubblicata il: ${dataFormatted}</p>
+                                    </div>
+                                </div>
+                                <div class="actions">
+                                    <button class="btn btn-resolve" onclick="resolveReportAdmin('${doc.id}')">✔️ Segna come Risolta</button>
+                                    <button class="btn btn-delete" onclick="deleteReport('${doc.id}')">Elimina</button>
+                                </div>
+                            </div>`;
+                    }
                 });
+
+                badgePending.innerText = pendingCount;
+                badgeActive.innerText = activeCount;
+
+                if (pendingCount === 0) {
+                    pendingList.innerHTML = `<div class="empty-state">Nessuna segnalazione in attesa di moderazione.</div>`;
+                }
+                if (activeCount === 0) {
+                    activeList.innerHTML = `<div class="empty-state">Nessuna segnalazione attiva sulla mappa al momento.</div>`;
+                }
             });
         }
 
@@ -228,11 +283,63 @@
                 .catch(e => showToast("Errore durante l'approvazione: " + e.message));
         }
 
+        function resolveReportAdmin(id) {
+            if (confirm("Vuoi segnare questa segnalazione come risolta/chiusa? Verrà rimossa dalla mappa pubblica.")) {
+                db.collection("segnalazioni").doc(id).update({ stato: "chiusa" })
+                    .then(() => showToast("Segnalazione chiusa con successo!"))
+                    .catch(e => showToast("Errore durante la chiusura: " + e.message));
+            }
+        }
+
         function deleteReport(id) {
             if (confirm("Sei sicuro di voler eliminare definitivamente questa segnalazione?")) {
                 db.collection("segnalazioni").doc(id).delete()
                     .then(() => showToast("Segnalazione eliminata."))
                     .catch(e => showToast("Errore durante l'eliminazione: " + e.message));
+            }
+        }
+
+        async function exportCSV() {
+            try {
+                const snapshot = await db.collection("segnalazioni").get();
+                if (snapshot.empty) {
+                    showToast("Nessun dato da esportare.");
+                    return;
+                }
+
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "ID,Indirizzo,Tipologia,Stato,Conferme,Latitudine,Longitudine,Email Utente,Data Creazione\r\n";
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    const id = doc.id;
+                    const indirizzo = `"${(d.indirizzoManuale || '').replace(/"/g, '""')}"`;
+                    const tipo = `"${(d.tipoRifiuto || '').replace(/"/g, '""')}"`;
+                    const stato = d.stato || "in_attesa";
+                    const conferme = d.conferme || 1;
+                    const lat = d.lat || "";
+                    const lng = d.lng || "";
+                    const email = `"${(d.emailUtente || '').replace(/"/g, '""')}"`;
+                    let dataCreazione = "";
+                    if (d.dataCreazione && d.dataCreazione.toDate) {
+                        dataCreazione = d.dataCreazione.toDate().toISOString();
+                    }
+
+                    const row = [id, indirizzo, tipo, stato, conferme, lat, lng, email, dataCreazione].join(",");
+                    csvContent += row + "\r\n";
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `palermofix_segnalazioni_${new Date().toISOString().slice(0,10)}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast("File CSV esportato con successo!");
+            } catch (e) {
+                console.error(e);
+                showToast("Errore durante l'esportazione CSV.");
             }
         }
     </script>
