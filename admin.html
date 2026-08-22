@@ -52,6 +52,7 @@
         .dashboard-header h1 { font-size: 20px; color: var(--dark); display: flex; align-items: center; gap: 10px; }
         .badge-count { background: #f39c1220; color: var(--primary); padding: 4px 10px; border-radius: 20px; font-size: 14px; font-weight: bold; }
         .badge-count-active { background: #2980b920; color: var(--info); padding: 4px 10px; border-radius: 20px; font-size: 14px; font-weight: bold; }
+        .badge-count-closed { background: #7f8c8d20; color: var(--gray); padding: 4px 10px; border-radius: 20px; font-size: 14px; font-weight: bold; }
         
         .header-actions { display: flex; gap: 10px; align-items: center; }
 
@@ -74,6 +75,7 @@
             border-left: 5px solid var(--primary); animation: fadeIn 0.3s ease;
         }
         .report-card.active-pin { border-left-color: var(--info); }
+        .report-card.closed-pin { border-left-color: var(--gray); opacity: 0.85; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .report-info { display: flex; gap: 20px; align-items: flex-start; }
@@ -142,6 +144,10 @@
             <!-- Sezione 2: Attive sulla Mappa -->
             <h2 class="section-title">🗺️ Segnalazioni attive sulla mappa <span class="badge-count-active" id="count-active">0</span></h2>
             <div id="active-list" class="reports-grid"></div>
+
+            <!-- Sezione 3: Risolte / Chiuse (Pronte per la cancellazione definitiva) -->
+            <h2 class="section-title">✔️ Segnalazioni chiuse / storicizzate <span class="badge-count-closed" id="count-closed">0</span></h2>
+            <div id="closed-list" class="reports-grid"></div>
         </div>
     </div>
 
@@ -200,18 +206,22 @@
         }
 
         function loadReports() {
-            // Ascoltiamo tutte le segnalazioni per popolare entrambe le sezioni in tempo reale
             db.collection("segnalazioni").onSnapshot(snapshot => {
                 const pendingList = document.getElementById('pending-list');
                 const activeList = document.getElementById('active-list');
+                const closedList = document.getElementById('closed-list');
+                
                 const badgePending = document.getElementById('count-pending');
                 const badgeActive = document.getElementById('count-active');
+                const badgeClosed = document.getElementById('count-closed');
                 
                 pendingList.innerHTML = '';
                 activeList.innerHTML = '';
+                closedList.innerHTML = '';
 
                 let pendingCount = 0;
                 let activeCount = 0;
+                let closedCount = 0;
 
                 snapshot.forEach(doc => {
                     const d = doc.data();
@@ -262,18 +272,34 @@
                                     <button class="btn btn-delete" onclick="deleteReport('${doc.id}')">Elimina</button>
                                 </div>
                             </div>`;
+                    } else if (stato === "chiusa") {
+                        closedCount++;
+                        closedList.innerHTML += `
+                            <div class="report-card closed-pin">
+                                <div class="report-info">
+                                    ${imgHtml}
+                                    <div class="report-details">
+                                        <h3>${d.tipoRifiuto || 'Segnalazione'} (Risolta)</h3>
+                                        <p><b>📍 Indirizzo:</b> ${d.indirizzoManuale || 'Non specificato'}</p>
+                                        <p><b>👥 Conferme finali:</b> ${d.conferme || 1}</p>
+                                        <p><b>✉️ Email:</b> ${d.emailUtente || 'Non specificata'}</p>
+                                        <p style="font-size: 11px; color: #888; margin-top: 4px;">📅 Data creazione: ${dataFormatted}</p>
+                                    </div>
+                                </div>
+                                <div class="actions">
+                                    <button class="btn btn-delete" style="width: 100%;" onclick="deleteReport('${doc.id}')">🗑️ Elimina Definitivamente dal DB</button>
+                                </div>
+                            </div>`;
                     }
                 });
 
                 badgePending.innerText = pendingCount;
                 badgeActive.innerText = activeCount;
+                badgeClosed.innerText = closedCount;
 
-                if (pendingCount === 0) {
-                    pendingList.innerHTML = `<div class="empty-state">Nessuna segnalazione in attesa di moderazione.</div>`;
-                }
-                if (activeCount === 0) {
-                    activeList.innerHTML = `<div class="empty-state">Nessuna segnalazione attiva sulla mappa al momento.</div>`;
-                }
+                if (pendingCount === 0) pendingList.innerHTML = `<div class="empty-state">Nessuna segnalazione in attesa.</div>`;
+                if (activeCount === 0) activeList.innerHTML = `<div class="empty-state">Nessuna segnalazione attiva sulla mappa.</div>`;
+                if (closedCount === 0) closedList.innerHTML = `<div class="empty-state">Nessuna segnalazione chiusa in archivio.</div>`;
             });
         }
 
@@ -292,9 +318,9 @@
         }
 
         function deleteReport(id) {
-            if (confirm("Sei sicuro di voler eliminare definitivamente questa segnalazione?")) {
+            if (confirm("Sei sicuro di voler eliminare definitivamente questo documento da Firebase? L'azione è irreversibile.")) {
                 db.collection("segnalazioni").doc(id).delete()
-                    .then(() => showToast("Segnalazione eliminata."))
+                    .then(() => showToast("Documento eliminato definitivamente dal database."))
                     .catch(e => showToast("Errore durante l'eliminazione: " + e.message));
             }
         }
