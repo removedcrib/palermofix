@@ -184,7 +184,7 @@
         #photo-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; display: none; justify-content: center; align-items: center; cursor: zoom-out; }
         #photo-overlay img { max-width: 92%; max-height: 92%; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
 
-        #code-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 9998; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        #code-modal, #duplicate-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 9998; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .modal-content { background: #fff; padding: 30px 24px; border-radius: 28px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
         .modal-content h3 { margin-top: 0; color: var(--dark); font-size: 20px; font-weight: 800; }
         .code-box { background: #fff3ed; border: 2px dashed var(--primary); padding: 14px; font-size: 24px; font-weight: 800; letter-spacing: 3px; color: var(--primary); margin: 20px 0; border-radius: 14px; user-select: all; }
@@ -214,7 +214,7 @@
         </div>
         <div class="banner-actions">
             <button class="btn-main" style="padding: 10px 16px; font-size: 13px; max-width: none;" onclick="useGPSForCenter()">📍 Usa GPS</button>
-            <button class="btn-main btn-alt" style="padding: 10px 16px; font-size: 13px; max-width: none;" onclick="confirmMapPosition()">Conferma Posizione</button>
+            <button class="btn-main btn-alt" style="padding: 10px 16px; font-size: 13px; max-width: none;" onclick="checkProximityAndProceed()">Conferma Posizione</button>
         </div>
     </div>
 
@@ -256,6 +256,17 @@
             <div class="welcome-actions">
                 <button class="btn-main" id="welcome-next-btn" onclick="nextWelcomeStep()" style="max-width: none;">Avanti</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modale di avviso prossimità / deduplicazione -->
+    <div id="duplicate-modal">
+        <div class="modal-content">
+            <h3>Segnalazione Già Presente! 📍</h3>
+            <p id="duplicate-msg" style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 15px;"></p>
+            
+            <button class="btn-main" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 8px; font-size: 13px;" onclick="joinExistingReport()">👍 Conferma questo problema</button>
+            <button class="btn-main btn-alt" style="width: 100%; max-width: none; padding: 12px;" onclick="proceedAnyway()">✨ È un problema diverso</button>
         </div>
     </div>
 
@@ -401,6 +412,7 @@
         let currentWelcomeStep = 1;
         let lockedCoords = null;
         let lastReportData = null;
+        let pendingNearbyReport = null; // Memorizza il doppione trovato per la conferma
 
         window.addEventListener('DOMContentLoaded', () => {
             if (!localStorage.getItem('palermoFix_intro_visto')) {
@@ -468,6 +480,19 @@
         function closeCodeModal() { document.getElementById('code-modal').style.display = 'none'; }
         function generateCode() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
 
+        // Formula Haversine per calcolare la distanza in metri tra coordinate
+        function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const dLat = (lat2 - lat1) * (Math.PI / 180);
+            const dLon = (lon2 - lon1) * (Math.PI / 180);
+            const a = 
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
         function loadMarkers() {
             markersLayer.clearLayers();
             db.collection("segnalazioni").get().then((querySnapshot) => {
@@ -476,6 +501,7 @@
                     const data = doc.data();
                     if ((data.stato || "in_attesa") === "approvata" && data.lat && data.lng) {
                         activeCount++;
+                        const conferme = data.conferme || 1;
                         let pinColor = "#ff6b35"; 
                         switch(data.tipoRifiuto) {
                             case "Micro-discarica / Sacchi abbandonati": pinColor = "#e63946"; break;
@@ -485,17 +511,43 @@
                             case "Sfalci di potatura e verde": pinColor = "#2ec4b6"; break;
                         }
 
+                        // Se ci sono più conferme, intensifichiamo o scaliamo il colore
+                        if (conferme >= 5) pinColor = "#900C3F";
+
+                        // Controllo se l'utente ha già votato questa segnalazione via localStorage
+                        const alreadyConfirmed = localStorage.getItem(`confirmed_${doc.id}`) === 'true';
+
                         const content = `
-                            <div class="custom-popup">
-                                <b style="color: ${pinColor};">${data.tipoRifiuto || 'Segnalazione Rifiuti'}</b>
-                                <p><b>Indirizzo:</b> ${data.indirizzoManuale || 'Non specificato'}</p>
-                                <p>${data.descrizione || ''}</p>
+                            <div class="custom-popup" style="text-align: left;">
+                                <b style="color: ${pinColor};">${data.tipoRifiuto || 'Segnalazione'}</b>
+                                <p style="margin: 4px 0;"><b>Indirizzo:</b> ${data.indirizzoManuale || 'Non specificato'}</p>
+                                <p style="margin: 4px 0;">👥 <b>Segnalazioni/Conferme:</b> ${conferme}</p>
+                                <p style="margin: 4px 0;">${data.descrizione || ''}</p>
                                 ${data.foto ? `<img src="${data.foto}" onclick="zoomImage('${data.foto}')" title="Clicca per ingrandire">` : ''}
+                                <div style="margin-top: 10px; text-align: center;">
+                                    ${alreadyConfirmed 
+                                        ? '<span style="font-size: 11px; color: #2ec4b6; font-weight: 700;">✔️ Hai confermato questo problema</span>' 
+                                        : `<button onclick="confirmExistingReport('${doc.id}')" style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%;">Conferma Problema (+1)</button>`
+                                    }
+                                </div>
                             </div>
                         `;
-                        L.circleMarker([data.lat, data.lng], {
-                            radius: 9, fillColor: pinColor, color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
-                        }).addTo(markersLayer).bindPopup(content);
+
+                        // Marker personalizzato con badge numerico se conferme > 1
+                        const iconHtml = `
+                            <div style="background-color: ${pinColor}; width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 6px rgba(0,0,0,0.3); border: 2px solid white;">
+                                ${conferme > 1 ? `<span style="transform: rotate(45deg); color: white; font-weight: 800; font-size: 10px;">${conferme}</span>` : '<span style="width: 8px; height: 8px; background: white; border-radius: 50%; transform: rotate(45deg);"></span>'}
+                            </div>
+                        `;
+
+                        const customIcon = L.divIcon({
+                            className: 'custom-pin-marker',
+                            html: iconHtml,
+                            iconSize: [28, 28],
+                            iconAnchor: [14, 28]
+                        });
+
+                        L.marker([data.lat, data.lng], { icon: customIcon }).addTo(markersLayer).bindPopup(content);
                     }
                 });
                 document.getElementById('active-count-badge').innerText = activeCount + (activeCount === 1 ? ' attiva in zona' : ' attive in zona');
@@ -506,6 +558,32 @@
         }
 
         loadMarkers();
+
+        // Funzione per confermare direttamente da un pin esistente nel popup
+        async function confirmExistingReport(docId) {
+            if (localStorage.getItem(`confirmed_${docId}`) === 'true') {
+                showToast("Hai già confermato questa segnalazione.");
+                return;
+            }
+
+            try {
+                const docRef = db.collection("segnalazioni").doc(docId);
+                await db.runTransaction(async (transaction) => {
+                    const doc = await transaction.get(docRef);
+                    if (!doc.exists) throw "Segnalazione non esistente!";
+                    const newConferme = (doc.data().conferme || 1) + 1;
+                    transaction.update(docRef, { conferme: newConferme });
+                });
+
+                localStorage.setItem(`confirmed_${docId}`, 'true');
+                showToast("Grazie! Segnalazione confermata con successo.");
+                map.closePopup();
+                loadMarkers();
+            } catch (error) {
+                console.error("Errore nella conferma: ", error);
+                showToast("Errore durante l'operazione.");
+            }
+        }
 
         async function resolveReportByCode() {
             const inputCode = document.getElementById('closure-code-input').value.trim().toUpperCase();
@@ -568,13 +646,60 @@
             }
         }
 
-        function confirmMapPosition() {
+        // Controllo di prossimità prima di aprire il form di nuova segnalazione
+        async function checkProximityAndProceed() {
             const center = map.getCenter();
             lockedCoords = { lat: center.lat, lng: center.lng };
 
+            try {
+                const snapshot = await db.collection("segnalazioni").where("stato", "==", "approvata").get();
+                let nearbyReport = null;
+                let minDistance = Infinity;
+                const SOGLIA_METRI = 30; // Raggio di tolleranza
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.lat && data.lng) {
+                        const dist = getDistanceFromLatLonInMeters(lockedCoords.lat, lockedCoords.lng, data.lat, data.lng);
+                        if (dist <= SOGLIA_METRI && dist < minDistance) {
+                            minDistance = dist;
+                            nearbyReport = { id: doc.id, ...data };
+                        }
+                    }
+                });
+
+                if (nearbyReport) {
+                    pendingNearbyReport = nearbyReport;
+                    document.getElementById('duplicate-msg').innerText = `Esiste già una segnalazione attiva (${nearbyReport.tipoRifiuto || 'Rifiuti'}) a circa ${Math.round(minDistance)} metri da questo punto. Vuoi unirti e confermarla anziché crearne una nuova?`;
+                    document.getElementById('duplicate-modal').style.display = 'flex';
+                } else {
+                    document.getElementById('center-pin').style.display = 'none';
+                    document.getElementById('pin-picker-banner').style.display = 'none';
+                    openPanel('report-panel');
+                }
+            } catch (err) {
+                console.error("Errore controllo prossimità:", err);
+                // In caso di errore, facciamo comunque procedere l'utente
+                document.getElementById('center-pin').style.display = 'none';
+                document.getElementById('pin-picker-banner').style.display = 'none';
+                openPanel('report-panel');
+            }
+        }
+
+        async function joinExistingReport() {
+            if (!pendingNearbyReport) return;
+            document.getElementById('duplicate-modal').style.display = 'none';
+            await confirmExistingReport(pendingNearbyReport.id);
+            pendingNearbyReport = null;
             document.getElementById('center-pin').style.display = 'none';
             document.getElementById('pin-picker-banner').style.display = 'none';
+        }
 
+        function proceedAnyway() {
+            document.getElementById('duplicate-modal').style.display = 'none';
+            pendingNearbyReport = null;
+            document.getElementById('center-pin').style.display = 'none';
+            document.getElementById('pin-picker-banner').style.display = 'none';
             openPanel('report-panel');
         }
 
@@ -640,8 +765,8 @@
 
                 await emailjs.send("service_00o5cml", "template_0sfzma5", templateParams);
 
-                // 2. Salvataggio su Firestore
-                await db.collection("segnalazioni").add({
+                // 2. Salvataggio su Firestore con campo conferme inizializzato a 1
+                const docRef = await db.collection("segnalazioni").add({
                     indirizzoManuale: addressText,
                     emailUtente: userEmail,
                     tipoRifiuto: tipoRifiuto,
@@ -651,9 +776,13 @@
                     foto: imageDataUrl,
                     stato: "in_attesa",
                     codiceChiusura: closureCode,
+                    conferme: 1,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
+                // Segnamo in locale che l'autore ha già "confermatosi" la propria segnalazione
+                localStorage.setItem(`confirmed_${docRef.id}`, 'true');
+
                 lastReportData = {
                     indirizzo: addressText,
                     tipo: tipoRifiuto,
