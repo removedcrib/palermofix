@@ -289,7 +289,8 @@
             <p id="duplicate-msg" style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 15px;"></p>
             
             <button class="btn-main" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 8px; font-size: 13px;" onclick="openConfirmCaptchaModalFromDuplicate()">👍 Conferma questo problema</button>
-            <button class="btn-main btn-alt" style="width: 100%; max-width: none; padding: 12px;" onclick="proceedAnyway()">✨ È un problema diverso</button>
+            <button class="btn-main btn-alt" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 8px; font-size: 13px;" onclick="proceedAnyway()">✨ È un problema diverso</button>
+            <button class="close-btn" style="width: 100%; height: auto; border-radius: 12px; background: rgba(0,0,0,0.05); padding: 10px; font-size: 13px; font-weight: 700;" onclick="closeDuplicateModal()">Annulla</button>
         </div>
     </div>
 
@@ -614,6 +615,11 @@
             if (typeof turnstile !== 'undefined') {
                 turnstile.reset();
             }
+        }
+
+        function closeDuplicateModal() {
+            document.getElementById('duplicate-modal').style.display = 'none';
+            pendingNearbyReport = null;
         }
 
         function openConfirmCaptchaModalFromDuplicate() {
