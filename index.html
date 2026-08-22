@@ -19,8 +19,9 @@
             --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; background-color: #f0f4f8; }
-        #map { height: 100vh; width: 100vw; z-index: 1; }
+        /* Usiamo 100dvh per evitare problemi con le barre dinamiche di Safari su iPhone */
+        body, html { margin: 0; padding: 0; height: 100%; height: 100dvh; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; background-color: #f0f4f8; }
+        #map { height: 100%; height: 100dvh; width: 100vw; z-index: 1; }
         
         /* Top Bar Elegante (Header) */
         #top-bar {
@@ -71,7 +72,7 @@
         .welcome-actions { display: flex; flex-direction: column; gap: 10px; }
 
         #ui-overlay { 
-            position: absolute; bottom: 30px; left: 0; right: 0; z-index: 1000; 
+            position: absolute; bottom: 20px; left: 0; right: 0; z-index: 1000; 
             padding: 0 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; 
             pointer-events: none;
         }
@@ -91,7 +92,7 @@
 
         .btn-main { 
             background: var(--primary-gradient); color: white; border: none; 
-            padding: 15px 28px; border-radius: 20px; font-size: 15px; font-weight: 700; 
+            padding: 14px 24px; border-radius: 18px; font-size: 14px; font-weight: 700; 
             box-shadow: 0 10px 25px rgba(255, 107, 53, 0.4); width: 100%; max-width: 380px; 
             cursor: pointer; transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
             pointer-events: auto; display: flex; align-items: center; justify-content: center; gap: 8px; 
@@ -110,14 +111,14 @@
             position: fixed; 
             top: 50%; left: 50%; 
             transform: translate(-50%, -50%) scale(0.9); 
-            width: 90%; max-width: 440px; max-height: 85vh; 
+            width: 90%; max-width: 440px; max-height: 80vh; 
             background: var(--glass-bg); 
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--glass-border);
             border-radius: 28px; 
             z-index: 2000; opacity: 0; pointer-events: none;
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
-            padding: 24px; box-sizing: border-box; overflow-y: auto; 
+            padding: 20px; box-sizing: border-box; overflow-y: auto; 
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
         }
         .slide-panel.active { 
@@ -126,36 +127,36 @@
             pointer-events: auto; 
         }
         
-        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .panel-header h2 { font-size: 22px; font-weight: 800; color: var(--dark); margin: 0; letter-spacing: -0.5px; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .panel-header h2 { font-size: 20px; font-weight: 800; color: var(--dark); margin: 0; letter-spacing: -0.5px; }
         .close-btn { 
-            background: rgba(0,0,0,0.05); border: none; width: 36px; height: 36px; border-radius: 50%;
-            font-size: 18px; cursor: pointer; color: var(--dark); display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.05); border: none; width: 34px; height: 34px; border-radius: 50%;
+            font-size: 16px; cursor: pointer; color: var(--dark); display: flex; align-items: center; justify-content: center;
             transition: background 0.2s;
         }
         .close-btn:hover { background: rgba(0,0,0,0.1); }
 
         /* Stili Legenda Pin */
-        .legend-item { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; font-size: 13px; font-weight: 600; color: var(--dark); }
+        .legend-item { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 13px; font-weight: 600; color: var(--dark); }
         .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
 
-        .form-group { margin-bottom: 16px; position: relative; }
+        .form-group { margin-bottom: 12px; position: relative; }
         input, textarea, select { 
-            width: 100%; padding: 14px 16px; border: 2px solid rgba(0,0,0,0.06); 
-            border-radius: 14px; box-sizing: border-box; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif;
+            width: 100%; padding: 12px 14px; border: 2px solid rgba(0,0,0,0.06); 
+            border-radius: 12px; box-sizing: border-box; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif;
             background: rgba(255, 255, 255, 0.9); color: var(--dark); transition: all 0.2s;
         }
         input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1); }
         
         .btn-secondary { 
             background: rgba(255, 107, 53, 0.1); color: var(--primary); border: none; 
-            padding: 12px; border-radius: 12px; margin-top: 8px; cursor: pointer; width: 100%; 
+            padding: 10px; border-radius: 10px; margin-top: 6px; cursor: pointer; width: 100%; 
             font-weight: 700; font-size: 13px; transition: background 0.2s;
         }
         .btn-secondary:hover { background: rgba(255, 107, 53, 0.18); }
         
-        .privacy-note { font-size: 11px; color: #e76f51; margin-top: 6px; line-height: 1.4; font-weight: 500; }
-        .hint-text { font-size: 11px; color: #6c757d; margin-top: 6px; line-height: 1.4; }
+        .privacy-note { font-size: 11px; color: #e76f51; margin-top: 4px; line-height: 1.4; font-weight: 500; }
+        .hint-text { font-size: 11px; color: #6c757d; margin-top: 4px; line-height: 1.4; }
 
         .leaflet-popup-content-wrapper { border-radius: 16px; padding: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
         .custom-popup img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 10px; margin-top: 8px; cursor: zoom-in; }
@@ -182,7 +183,6 @@
 </head>
 <body>
 
-    <!-- Header Superiore (Top Bar) -->
     <div id="top-bar">
         <div class="brand-pill">
             <div class="brand-logo">PF</div>
@@ -197,7 +197,6 @@
         </div>
     </div>
 
-    <!-- Modal Benvenuto / Tutorial -->
     <div id="welcome-modal">
         <div class="welcome-card">
             <div id="step1" class="step active">
@@ -241,23 +240,21 @@
         </div>
     </div>
 
-    <!-- UI Overlay Inferiore con Badge Firma in basso -->
     <div id="ui-overlay">
         <button class="btn-main" onclick="openPanel('report-panel')">✨ Nuova Segnalazione Rifiuti</button>
         <button class="btn-main btn-alt" onclick="openPanel('close-panel')">✔️ Risolvi con Codice</button>
         
         <a href="mailto:hi@palermofix.it" class="credits-tag" style="text-decoration: none;">
-            <span>👨‍💻 By</span> <span class="anon-text"><span class="anon-rosa">A.N.</span><span class="anon-nero">O.N.</span></span>
+            <span>💻 By</span> <span class="anon-text"><span class="anon-rosa">A.N.</span><span class="anon-nero">O.N.</span></span>
         </a>
     </div>
 
-    <!-- Pannello Legenda Mappa -->
     <div id="legend-panel" class="slide-panel">
         <div class="panel-header">
             <h2>Legenda Mappa</h2>
             <button class="close-btn" onclick="closePanel('legend-panel')">&times;</button>
         </div>
-        <p style="font-size: 13px; color: #666; margin-bottom: 20px;">I marker sulla mappa sono classificati per tipologia di criticità ambientale:</p>
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">I marker sulla mappa sono classificati per tipologia di criticità ambientale:</p>
         
         <div class="legend-item">
             <div class="legend-dot" style="background: #e63946;"></div>
@@ -283,7 +280,6 @@
         <button class="btn-main" onclick="closePanel('legend-panel')" style="width: 100%; max-width: none; margin-top: 10px;">Chiudi</button>
     </div>
 
-    <!-- Pannello Nuova Segnalazione -->
     <div id="report-panel" class="slide-panel">
         <div class="panel-header">
             <h2>Nuova Segnalazione</h2>
@@ -316,12 +312,11 @@
         </div>
         
         <div class="form-group">
-            <textarea id="desc-input" placeholder="Aggiungi dettagli aggiuntivi..." rows="3"></textarea>
+            <textarea id="desc-input" placeholder="Aggiungi dettagli aggiuntivi..." rows="2"></textarea>
         </div>
 
-        <!-- Checkbox GDPR Obbligatoria -->
-        <div class="form-group" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; text-align: left;">
-            <input type="checkbox" id="privacy-check" style="width: 20px; height: 20px; margin-top: 2px; accent-color: var(--primary); cursor: pointer;" required>
+        <div class="form-group" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 6px; text-align: left;">
+            <input type="checkbox" id="privacy-check" style="width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primary); cursor: pointer;" required>
             <label for="privacy-check" style="font-size: 11px; color: #555; line-height: 1.4; cursor: pointer;">
                 Dichiaro di aver preso visione dell'<a href="#" onclick="openPrivacyModal(event)" style="color: var(--primary); font-weight: 700; text-decoration: underline;">Informativa sulla Privacy</a> e autorizzo il trattamento dei dati per la segnalazione civica.
             </label>
@@ -330,13 +325,12 @@
         <button class="btn-main" onclick="submitReport()" style="width:100%; max-width:none; margin-top: 4px;">Invia Segnalazione</button>
     </div>
 
-    <!-- Pannello Informativa Privacy (GDPR) con Firma Personalizzata -->
     <div id="privacy-modal" class="slide-panel">
         <div class="panel-header">
             <h2>Informativa Privacy</h2>
             <button class="close-btn" onclick="closePanel('privacy-modal')">&times;</button>
         </div>
-        <div style="font-size: 13px; color: #444; line-height: 1.6; max-height: 50vh; overflow-y: auto; padding-right: 5px; text-align: left;">
+        <div style="font-size: 13px; color: #444; line-height: 1.6; max-height: 45vh; overflow-y: auto; padding-right: 5px; text-align: left;">
             <p><b>1. Titolare del Trattamento</b><br>Palermo Fix è una piattaforma civica sperimentale. I dati raccolti sono trattati nel rispetto del Regolamento UE 2016/679 (GDPR).</p>
             
             <p><b>2. Dati Raccolti e Finalità</b><br>Raccogliamo esclusivamente le coordinate geografiche, la tipologia di rifiuto, una descrizione opzionale e fotografie caricate volontariamente al solo scopo di mappare e gestire il decoro urbano.</p>
@@ -347,30 +341,28 @@
             
             <p><b>5. Diritti dell'Utente</b><br>Puoi richiedere la cancellazione immediata di una segnalazione utilizzando il tuo codice di chiusura o contattando il supporto del progetto.</p>
             
-            <hr style="border: 0; border-top: 1px solid rgba(0,0,0,0.08); margin: 20px 0;">
+            <hr style="border: 0; border-top: 1px solid rgba(0,0,0,0.08); margin: 15px 0;">
             
-            <!-- FIRMA PERSONALIZZATA -->
-            <div style="text-align: center; padding: 5px 0 10px 0;">
-                <p style="font-size: 11px; color: #777; font-style: italic; margin-bottom: 6px;">Progetto sviluppato da</p>
-                <h3 style="font-size: 20px; font-weight: 800; letter-spacing: 3px; margin: 0; line-height: 1;">
+            <div style="text-align: center; padding: 0 0 5px 0;">
+                <p style="font-size: 11px; color: #777; font-style: italic; margin-bottom: 4px;">Progetto sviluppato da</p>
+                <h3 style="font-size: 18px; font-weight: 800; letter-spacing: 3px; margin: 0; line-height: 1;">
                     <span class="anon-rosa">A.N.</span><span class="anon-nero">O.N.</span>
                 </h3>
-                <p style="font-size: 10px; color: #aaa; margin: 6px 0 10px 0;">© 2026</p>
-                <a href="mailto:hi@palermofix.it" style="display: inline-block; color: var(--primary); font-size: 12px; font-weight: 700; text-decoration: none; border: 1.5px solid var(--primary); padding: 5px 14px; border-radius: 20px; background: rgba(255, 107, 53, 0.04);">
+                <p style="font-size: 10px; color: #aaa; margin: 4px 0 8px 0;">© 2026</p>
+                <a href="mailto:hi@palermofix.it" style="display: inline-block; color: var(--primary); font-size: 11px; font-weight: 700; text-decoration: none; border: 1.5px solid var(--primary); padding: 4px 12px; border-radius: 20px; background: rgba(255, 107, 53, 0.04);">
                     ✉️ hi@palermofix.it
                 </a>
             </div>
         </div>
-        <button class="btn-main" onclick="closePanel('privacy-modal')" style="width: 100%; max-width: none; margin-top: 15px;">Ho capito</button>
+        <button class="btn-main" onclick="closePanel('privacy-modal')" style="width: 100%; max-width: none; margin-top: 10px;">Ho capito</button>
     </div>
 
-    <!-- Pannello Chiusura -->
     <div id="close-panel" class="slide-panel">
         <div class="panel-header">
             <h2>Risolvi Segnalazione</h2>
             <button class="close-btn" onclick="closePanel('close-panel')">&times;</button>
         </div>
-        <p style="font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.5;">Inserisci il codice segreto che ti è stato fornito alla creazione per rimuovere la segnalazione.</p>
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px; line-height: 1.5;">Inserisci il codice segreto che ti è stato fornito alla creazione per rimuovere la segnalazione.</p>
         <div class="form-group">
             <input type="text" id="closure-code-input" placeholder="Codice segreto (es. A1B2C3)" style="text-transform: uppercase; text-align: center; font-weight: 700; letter-spacing: 1px;">
         </div>
