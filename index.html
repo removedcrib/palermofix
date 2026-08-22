@@ -202,42 +202,42 @@
     <!-- Banner guida in alto con X integrata nel layout -->
     <div id="pin-picker-banner">
         <div class="banner-top-row">
-            <p>📍 Sposta la mappa finché il pin rosso è sul punto esatto del rifiuto[cite: 1].</p>
+            <p>📍 Sposta la mappa finché il pin rosso è sul punto esatto del rifiuto.</p>
             <button class="banner-close" onclick="cancelPinSelection()" title="Annulla">&times;</button>
         </div>
         <div class="banner-actions">
-            <button class="btn-main" style="padding: 10px 16px; font-size: 13px; max-width: none;" onclick="useGPSForCenter()">📍 Usa GPS[cite: 1]</button>
-            <button class="btn-main btn-alt" style="padding: 10px 16px; font-size: 13px; max-width: none;" onclick="confirmMapPosition()">Conferma Posizione[cite: 1]</button>
+            <button class="btn-main" style="padding: 10px 16px; font-size: 13px; max-width: none;" onclick="useGPSForCenter()">📍 Usa GPS</button>
+            <button class="btn-main btn-alt" style="padding: 10px 16px; font-size: 13px; max-width: none;" onclick="confirmMapPosition()">Conferma Posizione</button>
         </div>
     </div>
 
     <div id="top-bar">
         <div class="brand-pill">
-            <div class="brand-logo">PF[cite: 1]</div>
+            <div class="brand-logo">PF</div>
             <div class="brand-info">
-                <h1>Palermo Fix[cite: 1]</h1>
-                <span id="active-count-badge">Caricamento...[cite: 1]</span>
+                <h1>Palermo Fix</h1>
+                <span id="active-count-badge">Caricamento...</span>
             </div>
         </div>
         <div class="top-actions">
-            <button class="top-btn" onclick="openPanel('legend-panel')" title="Legenda Mappa">🗺️[cite: 1]</button>
-            <button class="top-btn" onclick="openWelcomeModal()" title="Guida / Tutorial">ℹ️[cite: 1]</button>
+            <button class="top-btn" onclick="openPanel('legend-panel')" title="Legenda Mappa">🗺️</button>
+            <button class="top-btn" onclick="openWelcomeModal()" title="Guida / Tutorial">ℹ️</button>
         </div>
     </div>
 
     <div id="welcome-modal">
         <div class="welcome-card">
             <div id="step1" class="step active">
-                <h2>Palermo Fix 🚮[cite: 1]</h2>
-                <p>Una piattaforma civica per mappare in tempo reale le criticità ambientali e i rifiuti abbandonati nella nostra città[cite: 1].</p>
+                <h2>Palermo Fix 🚮</h2>
+                <p>Una piattaforma civica per mappare in tempo reale le criticità ambientali e i rifiuti abbandonati nella nostra città.</p>
             </div>
             <div id="step2" class="step">
-                <h2>Come segnalare 📍[cite: 1]</h2>
-                <p>Muovi la mappa per posizionare il pin centrale sul luogo esatto, conferma e scrivi l'indirizzo con il civico per la RAP[cite: 1].</p>
+                <h2>Come segnalare 📍</h2>
+                <p>Muovi la mappa per posizionare il pin centrale sul luogo esatto, conferma e scrivi l'indirizzo con il civico per la RAP.</p>
             </div>
             <div id="step3" class="step">
-                <h2>Chiudi il cerchio ✔️[cite: 1]</h2>
-                <p>Riceverai un codice segreto. Conservalo: ti servirà per rimuovere la segnalazione dalla mappa non appena il problema sarà risolto[cite: 1].</p>
+                <h2>Chiudi il cerchio ✔️</h2>
+                <p>Riceverai un codice segreto. Conservalo: ti servirà per rimuovere la segnalazione dalla mappa non appena il problema sarà risolto.</p>
             </div>
 
             <div class="step-dots">
@@ -247,13 +247,13 @@
             </div>
 
             <div class="welcome-actions">
-                <button class="btn-main" id="welcome-next-btn" onclick="nextWelcomeStep()" style="max-width: none;">Avanti[cite: 1]</button>
+                <button class="btn-main" id="welcome-next-btn" onclick="nextWelcomeStep()" style="max-width: none;">Avanti</button>
             </div>
         </div>
     </div>
 
-    <div id="map"></div>[cite: 1]
-    <div id="toast"></div>[cite: 1]
+    <div id="map"></div>
+    <div id="toast"></div>
 
     <div id="photo-overlay" onclick="closeZoom()">
         <img id="zoomed-img" src="">
@@ -262,68 +262,68 @@
     <!-- Modale di successo con codice e opzione mail RAP -->
     <div id="code-modal">
         <div class="modal-content">
-            <h3>Segnalazione Inviata! 🚀[cite: 1]</h3>
-            <p style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 5px;">Conserva questo codice per poter chiudere la segnalazione in futuro[cite: 1]:</p>
-            <div class="code-box" id="display-closure-code">------[cite: 1]</div>
+            <h3>Segnalazione Inviata! 🚀</h3>
+            <p style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 5px;">Conserva questo codice per poter chiudere la segnalazione in futuro:</p>
+            <div class="code-box" id="display-closure-code">------</div>
             
-            <button class="btn-main btn-alt" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 10px; font-size: 13px;" onclick="openRapMail()">✉️ Invia segnalazione a RAP (URP)[cite: 1]</button>
+            <button class="btn-main btn-alt" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 10px; font-size: 13px;" onclick="openRapMail()">✉️ Invia segnalazione a RAP (URP)</button>
             
-            <button class="btn-main" style="width: 100%; max-width: none; padding: 14px;" onclick="closeCodeModal()">Ho salvato il codice[cite: 1]</button>
+            <button class="btn-main" style="width: 100%; max-width: none; padding: 14px;" onclick="closeCodeModal()">Ho salvato il codice</button>
         </div>
     </div>
 
     <div id="ui-overlay">
-        <button class="btn-main" onclick="startPinSelection()">✨ Nuova Segnalazione Rifiuti[cite: 1]</button>
-        <button class="btn-main btn-alt" onclick="openPanel('close-panel')">✔️ Risolvi con Codice[cite: 1]</button>
+        <button class="btn-main" onclick="startPinSelection()">✨ Nuova Segnalazione Rifiuti</button>
+        <button class="btn-main btn-alt" onclick="openPanel('close-panel')">✔️ Risolvi con Codice</button>
         
         <a href="mailto:hi@palermofix.it" class="credits-tag" style="text-decoration: none;">
-            <span>💻 By[cite: 1]</span> <span class="anon-text"><span class="anon-rosa">A.N.</span><span class="anon-nero">O.N.</span></span>[cite: 1]
+            <span>💻 By</span> <span class="anon-text"><span class="anon-rosa">A.N.</span><span class="anon-nero">O.N.</span></span>
         </a>
     </div>
 
     <div id="legend-panel" class="slide-panel">
         <div class="panel-header">
-            <h2>Legenda Mappa[cite: 1]</h2>
+            <h2>Legenda Mappa</h2>
             <button class="close-btn" onclick="closePanel('legend-panel')">&times;</button>
         </div>
-        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">I marker sulla mappa sono classificati per tipologia di criticità ambientale[cite: 1]:</p>
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">I marker sulla mappa sono classificati per tipologia di criticità ambientale:</p>
         
-        <div class="legend-item"><div class="legend-dot" style="background: #e63946;"></div><span>Micro-discarica / Sacchi abbandonati[cite: 1]</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background: #ffb703;"></div><span>Cassonetti saturi o traboccanti[cite: 1]</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background: #8d6e63;"></div><span>Abbandono rifiuti ingombranti[cite: 1]</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background: #d4a373;"></div><span>Materiale edile e inerti[cite: 1]</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background: #2ec4b6;"></div><span>Sfalci di potatura e verde[cite: 1]</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background: #e63946;"></div><span>Micro-discarica / Sacchi abbandonati</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background: #ffb703;"></div><span>Cassonetti saturi o traboccanti</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background: #8d6e63;"></div><span>Abbandono rifiuti ingombranti</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background: #d4a373;"></div><span>Materiale edile e inerti</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background: #2ec4b6;"></div><span>Sfalci di potatura e verde</span></div>
         
-        <button class="btn-main" onclick="closePanel('legend-panel')" style="width: 100%; max-width: none; margin-top: 10px;">Chiudi[cite: 1]</button>
+        <button class="btn-main" onclick="closePanel('legend-panel')" style="width: 100%; max-width: none; margin-top: 10px;">Chiudi</button>
     </div>
 
     <!-- Modulo di inserimento dati (Fase 2) -->
     <div id="report-panel" class="slide-panel">
         <div class="panel-header">
-            <h2>Compila Segnalazione[cite: 1]</h2>
+            <h2>Compila Segnalazione</h2>
             <button class="close-btn" onclick="closePanel('report-panel')">&times;</button>
         </div>
         
         <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700; color: var(--dark); display: block; margin-bottom: 4px;">Indirizzo e Numero Civico (per la RAP)[cite: 1]</label>
+            <label style="font-size: 12px; font-weight: 700; color: var(--dark); display: block; margin-bottom: 4px;">Indirizzo e Numero Civico (per la RAP)</label>
             <input type="text" id="address-input" placeholder="Es. Via Roma 15 o di fronte al civico 12">
-            <div class="hint-text">💡 Scrivi l'indirizzo testuale chiaro. La posizione esatta è già stata bloccata sulla mappa[cite: 1].</div>
+            <div class="hint-text">💡 Scrivi l'indirizzo testuale chiaro. La posizione esatta è già stata bloccata sulla mappa.</div>
         </div>
 
         <div class="form-group">
             <select id="tipo-rifiuto-input">
-                <option value="" disabled selected>Seleziona tipologia rifiuto...[cite: 1]</option>
-                <option value="Cassonetti saturi o traboccanti">Cassonetti saturi o traboccanti[cite: 1]</option>
-                <option value="Abbandono rifiuti ingombranti">Abbandono rifiuti ingombranti[cite: 1]</option>
-                <option value="Micro-discarica / Sacchi abbandonati">Micro-discarica / Sacchi abbandonati[cite: 1]</option>
-                <option value="Materiale edile e inerti">Materiale edile e inerti[cite: 1]</option>
-                <option value="Sfalci di potatura e verde">Sfalci di potatura e verde[cite: 1]</option>
+                <option value="" disabled selected>Seleziona tipologia rifiuto...</option>
+                <option value="Cassonetti saturi o traboccanti">Cassonetti saturi o traboccanti</option>
+                <option value="Abbandono rifiuti ingombranti">Abbandono rifiuti ingombranti</option>
+                <option value="Micro-discarica / Sacchi abbandonati">Micro-discarica / Sacchi abbandonati</option>
+                <option value="Materiale edile e inerti">Materiale edile e inerti</option>
+                <option value="Sfalci di potatura e verde">Sfalci di potatura e verde</option>
             </select>
         </div>
         
         <div class="form-group">
             <input type="file" id="image-input" accept="image/*" capture="environment">
-            <div class="privacy-note">⚠️ Nota: Evita di includere volti di persone o targhe di veicoli nelle foto[cite: 1].</div>
+            <div class="privacy-note">⚠️ Nota: Evita di includere volti di persone o targhe di veicoli nelle foto.</div>
         </div>
         
         <div class="form-group">
@@ -338,45 +338,44 @@
         <div class="form-group" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 6px; text-align: left;">
             <input type="checkbox" id="privacy-check" style="width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primary); cursor: pointer;" required>
             <label for="privacy-check" style="font-size: 11px; color: #555; line-height: 1.4; cursor: pointer;">
-                Dichiaro di aver preso visione dell'<a href="#" onclick="openPrivacyModal(event)" style="color: var(--primary); font-weight: 700; text-decoration: underline;">Informativa sulla Privacy</a> e autorizzo il trattamento dei dati[cite: 1].
+                Dichiaro di aver preso visione dell'<a href="#" onclick="openPrivacyModal(event)" style="color: var(--primary); font-weight: 700; text-decoration: underline;">Informativa sulla Privacy</a> e autorizzo il trattamento dei dati.
             </label>
         </div>
 
-        <button class="btn-main" onclick="submitReport()" style="width:100%; max-width:none; margin-top: 4px;">Invia Segnalazione[cite: 1]</button>
+        <button class="btn-main" onclick="submitReport()" style="width:100%; max-width:none; margin-top: 4px;">Invia Segnalazione</button>
     </div>
 
     <div id="privacy-modal" class="slide-panel">
         <div class="panel-header">
-            <h2>Informativa Privacy[cite: 1]</h2>
+            <h2>Informativa Privacy</h2>
             <button class="close-btn" onclick="closePanel('privacy-modal')">&times;</button>
         </div>
         <div style="font-size: 13px; color: #444; line-height: 1.6; max-height: 45vh; overflow-y: auto; padding-right: 5px; text-align: left;">
             <p><b>1. Titolare del Trattamento</b><br>Palermo Fix è una piattaforma civica sperimentale. I dati raccolti sono trattati nel rispetto del Regolamento UE 2016/679 (GDPR).</p>
             <p><b>2. Dati Raccolti e Finalità</b><br>Raccogliamo le coordinate geografiche, l'indirizzo scritto dall'utente, la tipologia di rifiuto, una descrizione opzionale e fotografie caricate al solo scopo di mappare e gestire il decoro urbano.</p>
             <p><b>3. Immagini e Contenuti</b><br>È fatto divieto assoluto agli utenti di caricare fotografie contenenti dati personali identificabili (es. volti di persone, targhe di automobili).</p>
-            <p><b>4. Cookie Tecnici e Strumenti di Terze Parti</b><br>Il sito non utilizza cookie di profilazione o tracciamento pubblicitario. Vengono impiegati esclusivamente strumenti tecnici necessari al funzionamento e alla sicurezza: <b>Cloudflare Turnstile</b> per la protezione anti-spam del modulo e servizi di mappa (<b>OpenStreetMap / Leaflet</b>) per la visualizzazione geografica.</p>
-            <p><b>5. Conservazione dei Dati</b><br>I dati rimangono visibili sulla mappa fino alla loro risoluzione o cancellazione tramite il codice segreto assegnato.</p>
+            <p><b>4. Conservazione dei Dati</b><br>I dati rimangono visibili sulla mappa fino alla loro risoluzione o cancellazione tramite il codice segreto assegnato.</p>
             <hr style="border: 0; border-top: 1px solid rgba(0,0,0,0.08); margin: 15px 0;">
             <div style="text-align: center; padding: 0 0 5px 0;">
-                <p style="font-size: 11px; color: #777; font-style: italic; margin-bottom: 4px;">Progetto sviluppato da[cite: 1]</p>
+                <p style="font-size: 11px; color: #777; font-style: italic; margin-bottom: 4px;">Progetto sviluppato da</p>
                 <h3 style="font-size: 18px; font-weight: 800; letter-spacing: 3px; margin: 0; line-height: 1;"><span class="anon-rosa">A.N.</span><span class="anon-nero">O.N.</span></h3>
-                <p style="font-size: 10px; color: #aaa; margin: 4px 0 8px 0;">© 2026[cite: 1]</p>
-                <a href="mailto:hi@palermofix.it" style="display: inline-block; color: var(--primary); font-size: 11px; font-weight: 700; text-decoration: none; border: 1.5px solid var(--primary); padding: 4px 12px; border-radius: 20px; background: rgba(255, 107, 53, 0.04);">✉️ hi@palermofix.it[cite: 1]</a>
+                <p style="font-size: 10px; color: #aaa; margin: 4px 0 8px 0;">© 2026</p>
+                <a href="mailto:hi@palermofix.it" style="display: inline-block; color: var(--primary); font-size: 11px; font-weight: 700; text-decoration: none; border: 1.5px solid var(--primary); padding: 4px 12px; border-radius: 20px; background: rgba(255, 107, 53, 0.04);">✉️ hi@palermofix.it</a>
             </div>
         </div>
-        <button class="btn-main" onclick="closePanel('privacy-modal')" style="width: 100%; max-width: none; margin-top: 10px;">Ho capito[cite: 1]</button>
+        <button class="btn-main" onclick="closePanel('privacy-modal')" style="width: 100%; max-width: none; margin-top: 10px;">Ho capito</button>
     </div>
 
     <div id="close-panel" class="slide-panel">
         <div class="panel-header">
-            <h2>Risolvi Segnalazione[cite: 1]</h2>
+            <h2>Risolvi Segnalazione</h2>
             <button class="close-btn" onclick="closePanel('close-panel')">&times;</button>
         </div>
-        <p style="font-size: 13px; color: #666; margin-bottom: 15px; line-height: 1.5;">Inserisci il codice segreto che ti è stato fornito alla creazione per rimuovere la segnalazione[cite: 1].</p>
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px; line-height: 1.5;">Inserisci il codice segreto che ti è stato fornito alla creazione per rimuovere la segnalazione.</p>
         <div class="form-group">
             <input type="text" id="closure-code-input" placeholder="Codice segreto (es. A1B2C3)" style="text-transform: uppercase; text-align: center; font-weight: 700; letter-spacing: 1px;">
         </div>
-        <button class="btn-main btn-alt" onclick="resolveReportByCode()" style="width:100%; max-width:none;">Conferma e Risolvi[cite: 1]</button>
+        <button class="btn-main btn-alt" onclick="resolveReportByCode()" style="width:100%; max-width:none;">Conferma e Risolvi</button>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
