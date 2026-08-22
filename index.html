@@ -258,11 +258,15 @@
         <img id="zoomed-img" src="">
     </div>
 
+    <!-- Modale di successo con codice e opzione mail RAP -->
     <div id="code-modal">
         <div class="modal-content">
             <h3>Segnalazione Inviata! 🚀</h3>
-            <p style="font-size: 13px; color: #666; line-height: 1.5;">La tua segnalazione è stata presa in carico ed è visibile sulla mappa. Conserva questo codice per poterla chiudere in futuro:</p>
+            <p style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 5px;">Conserva questo codice per poter chiudere la segnalazione in futuro:</p>
             <div class="code-box" id="display-closure-code">------</div>
+            
+            <button class="btn-main btn-alt" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 10px; font-size: 13px;" onclick="openRapMail()">✉️ Invia segnalazione a RAP (URP)</button>
+            
             <button class="btn-main" style="width: 100%; max-width: none; padding: 14px;" onclick="closeCodeModal()">Ho salvato il codice</button>
         </div>
     </div>
@@ -375,6 +379,7 @@
     <script>
         let currentWelcomeStep = 1;
         let lockedCoords = null;
+        let lastReportData = null; // Variabile per memorizzare temporaneamente i dati dell'ultima segnalazione
 
         window.addEventListener('DOMContentLoaded', () => {
             if (!localStorage.getItem('palermoFix_intro_visto')) {
@@ -605,6 +610,15 @@
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
+                // Salviamo i dati per l'invio opzionale della mail alla RAP
+                lastReportData = {
+                    indirizzo: addressText,
+                    tipo: tipoRifiuto,
+                    descrizione: description,
+                    lat: lockedCoords.lat,
+                    lng: lockedCoords.lng
+                };
+
                 document.getElementById('display-closure-code').innerText = closureCode;
                 document.getElementById('code-modal').style.display = 'flex';
 
@@ -620,6 +634,26 @@
                 console.error("Errore durante il salvataggio: ", error);
                 showToast("Errore durante l'invio: " + error.message);
             }
+        }
+
+        // Funzione per aprire il client di posta con la bozza precompilata per la RAP
+        function openRapMail() {
+            if (!lastReportData) return;
+
+            const emailDestinatario = "urp@rapspa.it";
+            const oggetto = encodeURIComponent(`Segnalazione rifiuti abbandonati: ${lastReportData.tipo} - ${lastReportData.indirizzo}`);
+            const googleMapsUrl = `https://www.google.com/maps?q=${lastReportData.lat},${lastReportData.lng}`;
+            
+            const corpo = encodeURIComponent(
+                `Salve,\n\nSegnalo la presenza della seguente criticità ambientale sul territorio comunale:\n\n` +
+                `- Tipologia: ${lastReportData.tipo}\n` +
+                `- Indirizzo / Riferimento: ${lastReportData.indirizzo}\n` +
+                `- Descrizione: ${lastReportData.descrizione || 'Nessuna descrizione aggiuntiva'}\n\n` +
+                `Potete verificare la posizione esatta al seguente link:\n${googleMapsUrl}\n\n` +
+                `Cordiali saluti.`
+            );
+
+            window.location.href = `mailto:${emailDestinatario}?subject=${oggetto}&body=${corpo}`;
         }
     </script>
 </body>
