@@ -14,13 +14,22 @@
             --secondary: #00b4d8;
             --success: #2ec4b6;
             --dark: #1d3557; 
-            --glass-bg: rgba(255, 255, 255, 0.88);
-            --glass-border: rgba(255, 255, 255, 0.5);
+            --glass-bg: rgba(255, 255, 255, 0.92);
+            --glass-border: rgba(255, 255, 255, 0.6);
             --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
         body, html { margin: 0; padding: 0; height: 100%; height: 100dvh; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; background-color: #f0f4f8; }
         #map { height: 100%; height: 100dvh; width: 100vw; z-index: 1; }
+
+        /* Pin fisso al centro dello schermo durante la segnalazione */
+        #center-pin {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%);
+            width: 40px; height: 40px; z-index: 900; pointer-events: none; display: none;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+            transition: transform 0.2s ease;
+        }
+        #center-pin.bounce { transform: translate(-50%, -115%); }
         
         #top-bar {
             position: absolute; top: 20px; left: 20px; right: 20px; z-index: 1000;
@@ -105,22 +114,20 @@
 
         .slide-panel { 
             position: fixed; 
-            top: 50%; left: 50%; 
-            transform: translate(-50%, -50%) scale(0.9); 
-            width: 90%; max-width: 440px; max-height: 80vh; 
+            bottom: -100%; left: 0; right: 0; 
+            max-width: 480px; margin: 0 auto;
+            max-height: 85vh; 
             background: var(--glass-bg); 
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
-            border-radius: 28px; 
-            z-index: 2000; opacity: 0; pointer-events: none;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
-            padding: 20px; box-sizing: border-box; overflow-y: auto; 
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            border-radius: 32px 32px 0 0; 
+            z-index: 2000; 
+            transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+            padding: 24px 20px 30px 20px; box-sizing: border-box; overflow-y: auto; 
+            box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.15);
         }
         .slide-panel.active { 
-            transform: translate(-50%, -50%) scale(1); 
-            opacity: 1; 
-            pointer-events: auto; 
+            bottom: 0;
         }
         
         .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
@@ -143,6 +150,15 @@
         }
         input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1); }
         
+        /* Box dei suggerimenti dell'autocomplete */
+        #suggestions-box {
+            position: absolute; top: 100%; left: 0; right: 0; background: white;
+            border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 3000;
+            max-height: 180px; overflow-y: auto; display: none; margin-top: 4px; border: 1px solid rgba(0,0,0,0.08);
+        }
+        .suggestion-item { padding: 10px 14px; font-size: 13px; color: var(--dark); cursor: pointer; border-bottom: 1px solid #f0f4f8; }
+        .suggestion-item:hover { background: #fff3ed; color: var(--primary); font-weight: 600; }
+
         .btn-secondary { 
             background: rgba(255, 107, 53, 0.1); color: var(--primary); border: none; 
             padding: 10px; border-radius: 10px; margin-top: 6px; cursor: pointer; width: 100%; 
@@ -178,6 +194,11 @@
 </head>
 <body>
 
+    <!-- Pin fisso centrale per la selezione -->
+    <svg id="center-pin" viewBox="0 0 24 24" fill="var(--primary)">
+        <path d="M12 0C7.58 0 4 3.58 4 8c0 5.25 7 13 7 13s7-7.75 7-13c0-4.42-3.58-8-7-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
+    </svg>
+
     <div id="top-bar">
         <div class="brand-pill">
             <div class="brand-logo">PF</div>
@@ -200,7 +221,7 @@
             </div>
             <div id="step2" class="step">
                 <h2>Come segnalare 📍</h2>
-                <p>Posiziona il pin sul punto esatto, scrivi l'indirizzo con il numero civico e scatta una foto chiara per l'invio alla RAP.</p>
+                <p>Muovi la mappa per posizionare il pin centrale sul luogo esatto, scrivi l'indirizzo con il civico e scatta una foto per la RAP.</p>
             </div>
             <div id="step3" class="step">
                 <h2>Chiudi il cerchio ✔️</h2>
@@ -236,7 +257,7 @@
     </div>
 
     <div id="ui-overlay">
-        <button class="btn-main" onclick="openPanel('report-panel')">✨ Nuova Segnalazione Rifiuti</button>
+        <button class="btn-main" onclick="openReportPanel()">✨ Nuova Segnalazione Rifiuti</button>
         <button class="btn-main btn-alt" onclick="openPanel('close-panel')">✔️ Risolvi con Codice</button>
         
         <a href="mailto:hi@palermofix.it" class="credits-tag" style="text-decoration: none;">
@@ -283,9 +304,10 @@
         
         <div class="form-group">
             <label style="font-size: 12px; font-weight: 700; color: var(--dark); display: block; margin-bottom: 4px;">Indirizzo e Numero Civico (richiesto per la RAP)</label>
-            <input type="text" id="address-input" placeholder="Es. Via Roma 15 o di fronte al civico 12">
-            <button class="btn-secondary" onclick="useGPS()">📍 Usa la mia posizione GPS sulla mappa</button>
-            <div class="hint-text">💡 Trascina il pin sulla mappa nel punto esatto dell'abbandono e scrivi l'indirizzo preciso comprensivo di civico.</div>
+            <input type="text" id="address-input" placeholder="Cerca via (es. Via Roma 15)..." autocomplete="off" oninput="searchAddress(this.value)">
+            <div id="suggestions-box"></div>
+            <button class="btn-secondary" onclick="useGPS()">📍 Usa la mia posizione GPS</button>
+            <div class="hint-text">💡 Muovi la mappa per centrare il pin rosso nel punto esatto dell'abbandono.</div>
         </div>
 
         <div class="form-group">
@@ -311,7 +333,7 @@
         <div class="form-group" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 6px; text-align: left;">
             <input type="checkbox" id="privacy-check" style="width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primary); cursor: pointer;" required>
             <label for="privacy-check" style="font-size: 11px; color: #555; line-height: 1.4; cursor: pointer;">
-                Dichiaro di aver preso visione dell'<a href="#" onclick="openPrivacyModal(event)" style="color: var(--primary); font-weight: 700; text-decoration: underline;">Informativa sulla Privacy</a> e autorizzo il trattamento dei dati per la segnalazione civica.
+                Dichiaro di aver preso visione dell'<a href="#" onclick="openPrivacyModal(event)" style="color: var(--primary); font-weight: 700; text-decoration: underline;">Informativa sulla Privacy</a> e autorizzo il trattamento dei dati.
             </label>
         </div>
 
@@ -420,8 +442,6 @@
         L.control.zoom({ position: 'topright' }).addTo(map);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
-        let marker;
-        let selectedCoords = null;
         let markersLayer = L.layerGroup().addTo(map);
 
         function showToast(msg) {
@@ -530,15 +550,19 @@
         function openPanel(panelId) { 
             document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
             document.getElementById(panelId).classList.add('active'); 
-
-            if(panelId === 'report-panel' && !selectedCoords) {
-                const center = map.getCenter();
-                setMarkerPosition(center.lat, center.lng);
-            }
         }
         
+        function openReportPanel() {
+            document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('report-panel').classList.add('active');
+            document.getElementById('center-pin').style.display = 'block'; // Mostra il pin centrale
+        }
+
         function closePanel(panelId) { 
             document.getElementById(panelId).classList.remove('active'); 
+            if (panelId === 'report-panel') {
+                document.getElementById('center-pin').style.display = 'none'; // Nasconde il pin centrale
+            }
         }
 
         function openPrivacyModal(e) {
@@ -546,16 +570,46 @@
             openPanel('privacy-modal');
         }
 
-        function setMarkerPosition(lat, lng) {
-            if (marker) map.removeLayer(marker);
-            marker = L.marker([lat, lng], {draggable: true}).addTo(map);
-            marker.bindPopup("Trascina il pin sul punto esatto del problema").openPopup();
-            selectedCoords = { lat: lat, lng: lng };
-            
-            marker.on('dragend', function(e) {
-                var pos = marker.getLatLng();
-                selectedCoords = { lat: pos.lat, lng: pos.lng };
-            });
+        let searchTimeout;
+        function searchAddress(query) {
+            clearTimeout(searchTimeout);
+            const box = document.getElementById('suggestions-box');
+            if (query.length < 3) {
+                box.style.display = 'none';
+                return;
+            }
+
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Palermo, Italia")}&limit=5`);
+                    const data = await res.json();
+                    
+                    box.innerHTML = '';
+                    if (data.length > 0) {
+                        data.forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = 'suggestion-item';
+                            div.innerText = item.display_name;
+                            div.onclick = () => {
+                                document.getElementById('address-input').value = item.display_name;
+                                box.style.display = 'none';
+                                map.setView([parseFloat(item.lat), parseFloat(item.lon)], 18);
+                                
+                                // Effetto rimbalzo visivo sul pin centrale
+                                const pin = document.getElementById('center-pin');
+                                pin.classList.add('bounce');
+                                setTimeout(() => pin.classList.remove('bounce'), 300);
+                            };
+                            box.appendChild(div);
+                        });
+                        box.style.display = 'block';
+                    } else {
+                        box.style.display = 'none';
+                    }
+                } catch (e) {
+                    box.style.display = 'none';
+                }
+            }, 300);
         }
 
         function useGPS() {
@@ -563,13 +617,12 @@
                 navigator.geolocation.getCurrentPosition(
                     pos => {
                         map.setView([pos.coords.latitude, pos.coords.longitude], 18);
-                        setMarkerPosition(pos.coords.latitude, pos.coords.longitude);
-                        showToast("Posizione GPS acquisita e pin posizionato!");
+                        showToast("Mappa centrata sulla tua posizione GPS!");
                     },
                     err => showToast("Impossibile recuperare il GPS.")
                 );
             } else {
-                showToast("Geolocalizzazione non supportata dal browser.");
+                showToast("Geolocalizzazione non supportata.");
             }
         }
 
@@ -589,15 +642,13 @@
                 return;
             }
 
-            if (!selectedCoords) { 
-                showToast("Seleziona la posizione sulla mappa trascinando il pin!"); 
-                return; 
-            }
-
             if (!privacyChecked) {
                 showToast("Devi accettare l'informativa sulla privacy per procedere.");
                 return;
             }
+
+            // Prende le coordinate esatte del centro mappa dove punta il pin fisso
+            const centerCoords = map.getCenter();
 
             const imageInput = document.getElementById('image-input');
             let imageDataUrl = "";
@@ -637,8 +688,8 @@
                 await db.collection("segnalazioni").add({
                     indirizzoManuale: addressText,
                     tipoRifiuto: tipoRifiuto,
-                    lat: selectedCoords.lat,
-                    lng: selectedCoords.lng,
+                    lat: centerCoords.lat,
+                    lng: centerCoords.lng,
                     descrizione: description,
                     foto: imageDataUrl,
                     stato: "in_attesa",
@@ -654,8 +705,6 @@
                 document.getElementById('desc-input').value = '';
                 document.getElementById('image-input').value = '';
                 document.getElementById('privacy-check').checked = false;
-                if (marker) map.removeLayer(marker);
-                selectedCoords = null;
                 closePanel('report-panel');
                 loadMarkers();
             } catch (error) {
