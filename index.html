@@ -200,15 +200,15 @@
         .hint-text { font-size: 11px; color: #6c757d; margin-top: 4px; line-height: 1.4; }
 
         .leaflet-popup-content-wrapper { border-radius: 16px; padding: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
-        .custom-popup img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 10px; margin-top: 8px; cursor: zoom-in; }
+        .custom-popup img { width: 100%; max-height: 140px; object-fit: cover; border-radius: 10px; margin-top: 6px; cursor: zoom-in; }
         .custom-popup b { font-size: 14px; }
         .custom-popup p { margin: 6px 0 0 0; font-size: 13px; color: #555; }
 
         #photo-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; display: none; justify-content: center; align-items: center; cursor: zoom-out; }
         #photo-overlay img { max-width: 92%; max-height: 92%; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
 
-        #code-modal, #duplicate-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 9998; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
-        .modal-content { background: #fff; padding: 30px 24px; border-radius: 28px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
+        #code-modal, #duplicate-modal, #confirm-extra-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 9998; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .modal-content { background: #fff; padding: 30px 24px; border-radius: 28px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
         .modal-content h3 { margin-top: 0; color: var(--dark); font-size: 20px; font-weight: 800; }
         .code-box { background: #fff3ed; border: 2px dashed var(--primary); padding: 14px; font-size: 24px; font-weight: 800; letter-spacing: 3px; color: var(--primary); margin: 20px 0; border-radius: 14px; user-select: all; }
 
@@ -288,8 +288,33 @@
             <h3>Segnalazione Già Presente! 📍</h3>
             <p id="duplicate-msg" style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 15px;"></p>
             
-            <button class="btn-main" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 8px; font-size: 13px;" onclick="joinExistingReport()">👍 Conferma questo problema</button>
+            <button class="btn-main" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 8px; font-size: 13px;" onclick="openConfirmExtraModalFromDuplicate()">👍 Conferma con foto/nota</button>
             <button class="btn-main btn-alt" style="width: 100%; max-width: none; padding: 12px;" onclick="proceedAnyway()">✨ È un problema diverso</button>
+        </div>
+    </div>
+
+    <!-- Modale per aggiungere contributo extra (Foto opzionale + Nota + Turnstile protetto) -->
+    <div id="confirm-extra-modal">
+        <div class="modal-content">
+            <h3>Conferma Problema 📸</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Vuoi aggiungere una foto o un dettaglio per testimoniare che il problema persiste?</p>
+            
+            <div class="form-group" style="text-align: left;">
+                <label style="font-size: 11px; font-weight: 700; color: var(--dark); display: block; margin-bottom: 4px;">Foto aggiornata (Opzionale)</label>
+                <input type="file" id="extra-image-input" accept="image/*" capture="environment">
+            </div>
+
+            <div class="form-group" style="text-align: left;">
+                <textarea id="extra-note-input" placeholder="Nota aggiuntiva (es. Il cumulo è aumentato...)" rows="2"></textarea>
+            </div>
+
+            <!-- Widget Anti-Spam Cloudflare Turnstile per la conferma extra -->
+            <div class="form-group" style="display: flex; justify-content: center; margin: 15px 0;">
+                <div class="cf-turnstile" data-sitekey="0x4AAAAAAEYWAjVXMfRAMSI0" data-theme="light"></div>
+            </div>
+
+            <button class="btn-main" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 8px; font-size: 13px;" onclick="submitExtraContribution()">Invia Conferma</button>
+            <button class="close-btn" style="width: 100%; height: auto; border-radius: 12px; background: rgba(0,0,0,0.05); padding: 10px; font-size: 13px; font-weight: 700;" onclick="closeConfirmExtraModal()">Annulla</button>
         </div>
     </div>
 
@@ -436,6 +461,7 @@
         let lockedCoords = null;
         let lastReportData = null;
         let pendingNearbyReport = null; // Memorizza il doppione trovato per la conferma
+        let activeTargetDocId = null;
 
         window.addEventListener('DOMContentLoaded', () => {
             if (!localStorage.getItem('palermoFix_intro_visto')) {
@@ -540,17 +566,29 @@
                         // Controllo se l'utente ha già votato questa segnalazione via localStorage
                         const alreadyConfirmed = localStorage.getItem(`confirmed_${doc.id}`) === 'true';
 
+                        let extraPhotosHtml = '';
+                        if (data.contributiExtra && data.contributiExtra.length > 0) {
+                            extraPhotosHtml += '<div style="margin-top: 6px; font-size: 11px; color: #444;"><b>Aggiornamenti community:</b><div style="display: flex; gap: 4px; overflow-x: auto; margin-top: 4px;">';
+                            data.contributiExtra.forEach(c => {
+                                if (c.foto) {
+                                    extraPhotosHtml += `<img src="${c.foto}" onclick="zoomImage('${c.foto}')" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px; cursor: zoom-in;" title="${c.nota || 'Contributo cittadino'}">`;
+                                }
+                            });
+                            extraPhotosHtml += '</div></div>';
+                        }
+
                         const content = `
-                            <div class="custom-popup" style="text-align: left;">
+                            <div class="custom-popup" style="text-align: left; max-width: 220px;">
                                 <b style="color: ${pinColor};">${data.tipoRifiuto || 'Segnalazione'}</b>
                                 <p style="margin: 4px 0;"><b>Indirizzo:</b> ${data.indirizzoManuale || 'Non specificato'}</p>
                                 <p style="margin: 4px 0;">👥 <b>Segnalazioni/Conferme:</b> ${conferme}</p>
                                 <p style="margin: 4px 0;">${data.descrizione || ''}</p>
                                 ${data.foto ? `<img src="${data.foto}" onclick="zoomImage('${data.foto}')" title="Clicca per ingrandire">` : ''}
+                                ${extraPhotosHtml}
                                 <div style="margin-top: 10px; text-align: center;">
                                     ${alreadyConfirmed 
                                         ? '<span style="font-size: 11px; color: #2ec4b6; font-weight: 700;">✔️ Hai confermato questo problema</span>' 
-                                        : `<button onclick="confirmExistingReport('${doc.id}')" style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%;">Conferma Problema (+1)</button>`
+                                        : `<button onclick="openConfirmExtraModal('${doc.id}')" style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%;">Conferma Problema (+1)</button>`
                                     }
                                 </div>
                             </div>
@@ -582,28 +620,96 @@
 
         loadMarkers();
 
-        // Funzione per confermare direttamente da un pin esistente nel popup
-        async function confirmExistingReport(docId) {
+        function openConfirmExtraModal(docId) {
             if (localStorage.getItem(`confirmed_${docId}`) === 'true') {
                 showToast("Hai già confermato questa segnalazione.");
                 return;
             }
+            activeTargetDocId = docId;
+            document.getElementById('extra-image-input').value = '';
+            document.getElementById('extra-note-input').value = '';
+            document.getElementById('duplicate-modal').style.display = 'none';
+            document.getElementById('confirm-extra-modal').style.display = 'flex';
+        }
+
+        function closeConfirmExtraModal() {
+            document.getElementById('confirm-extra-modal').style.display = 'none';
+            activeTargetDocId = null;
+            if (typeof turnstile !== 'undefined') {
+                turnstile.reset();
+            }
+        }
+
+        function openConfirmExtraModalFromDuplicate() {
+            if (!pendingNearbyReport) return;
+            const docId = pendingNearbyReport.id;
+            pendingNearbyReport = null;
+            openConfirmExtraModal(docId);
+        }
+
+        async function submitExtraContribution() {
+            if (!activeTargetDocId) return;
+
+            const turnstileResponse = document.querySelector('#confirm-extra-modal [name="cf-turnstile-response"]')?.value;
+            if (!turnstileResponse) {
+                showToast("Completa la verifica anti-spam prima di confermare.");
+                return;
+            }
+
+            const extraImageInput = document.getElementById('extra-image-input');
+            const extraNote = document.getElementById('extra-note-input').value.trim();
+            let extraImageDataUrl = "";
+
+            if (extraImageInput.files && extraImageInput.files[0]) {
+                const file = extraImageInput.files[0];
+                extraImageDataUrl = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const MAX_WIDTH = 800;
+                            const scaleSize = MAX_WIDTH / img.width;
+                            canvas.width = scaleSize < 1 ? MAX_WIDTH : img.width;
+                            canvas.height = scaleSize < 1 ? img.height * scaleSize : img.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            resolve(canvas.toDataURL('image/jpeg', 0.7));
+                        };
+                        img.onerror = () => resolve("");
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = () => resolve("");
+                    reader.readAsDataURL(file);
+                });
+            }
 
             try {
-                const docRef = db.collection("segnalazioni").doc(docId);
+                const docRef = db.collection("segnalazioni").doc(activeTargetDocId);
                 await db.runTransaction(async (transaction) => {
                     const doc = await transaction.get(docRef);
                     if (!doc.exists) throw "Segnalazione non esistente!";
-                    const newConferme = (doc.data().conferme || 1) + 1;
-                    transaction.update(docRef, { conferme: newConferme });
+                    
+                    const currentConferme = doc.data().conferme || 1;
+                    const newContributo = {
+                        data: new Date().toISOString(),
+                        foto: extraImageDataUrl,
+                        nota: extraNote
+                    };
+
+                    transaction.update(docRef, {
+                        conferme: currentConferme + 1,
+                        contributiExtra: firebase.firestore.FieldValue.arrayUnion(newContributo)
+                    });
                 });
 
-                localStorage.setItem(`confirmed_${docId}`, 'true');
-                showToast("Grazie! Segnalazione confermata con successo.");
+                localStorage.setItem(`confirmed_${activeTargetDocId}`, 'true');
+                showToast("Grazie! Contributo aggiunto con successo.");
+                closeConfirmExtraModal();
                 map.closePopup();
                 loadMarkers();
             } catch (error) {
-                console.error("Errore nella conferma: ", error);
+                console.error("Errore nell'invio del contributo: ", error);
                 showToast("Errore durante l'operazione.");
             }
         }
@@ -709,15 +815,6 @@
             }
         }
 
-        async function joinExistingReport() {
-            if (!pendingNearbyReport) return;
-            document.getElementById('duplicate-modal').style.display = 'none';
-            await confirmExistingReport(pendingNearbyReport.id);
-            pendingNearbyReport = null;
-            document.getElementById('center-pin').style.display = 'none';
-            document.getElementById('pin-picker-banner').style.display = 'none';
-        }
-
         function proceedAnyway() {
             document.getElementById('duplicate-modal').style.display = 'none';
             pendingNearbyReport = null;
@@ -734,7 +831,7 @@
             const privacyChecked = document.getElementById('privacy-check').checked;
             
             // Controllo token Turnstile Anti-Spam
-            const turnstileResponse = document.querySelector('[name="cf-turnstile-response"]')?.value;
+            const turnstileResponse = document.querySelector('#report-panel [name="cf-turnstile-response"]')?.value;
             if (!turnstileResponse) {
                 showToast("Completa la verifica anti-spam prima di inviare.");
                 return;
@@ -800,6 +897,7 @@
                     stato: "in_attesa",
                     codiceChiusura: closureCode,
                     conferme: 1,
+                    contributiExtra: [],
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
