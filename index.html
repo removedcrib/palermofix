@@ -34,21 +34,26 @@
         /* Banner guida in alto quando si sceglie la posizione sulla mappa */
         #pin-picker-banner {
             position: absolute; top: 20px; left: 20px; right: 20px; z-index: 1100;
-            background: var(--dark); color: white; padding: 14px 20px; border-radius: 20px;
+            background: var(--dark); color: white; padding: 14px 16px; border-radius: 20px;
             display: none; flex-direction: column; gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-            text-align: center; position: relative;
+            text-align: center; box-sizing: border-box;
         }
-        #pin-picker-banner p { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.4; padding-right: 25px; }
-        .banner-actions { display: flex; gap: 8px; justify-content: center; }
         
-        /* Testino X per annullare direttamente dal banner */
+        .banner-top-row {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        }
+        #pin-picker-banner p { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.4; text-align: left; flex: 1; }
+        
+        /* Tasto X integrato senza fuoriuscire dai bordi */
         .banner-close {
-            position: absolute; top: 12px; right: 14px; background: rgba(255,255,255,0.15);
-            border: none; width: 28px; height: 28px; border-radius: 50%; color: white;
-            font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.15); border: none; width: 30px; height: 30px; 
+            border-radius: 50%; color: white; font-size: 16px; cursor: pointer; 
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
             transition: background 0.2s;
         }
         .banner-close:hover { background: rgba(255,255,255,0.3); }
+
+        .banner-actions { display: flex; gap: 8px; justify-content: center; }
         
         #top-bar {
             position: absolute; top: 20px; left: 20px; right: 20px; z-index: 1000;
@@ -120,7 +125,7 @@
             box-shadow: 0 10px 25px rgba(255, 107, 53, 0.4); width: 100%; max-width: 380px; 
             cursor: pointer; transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
             pointer-events: auto; display: flex; align-items: center; justify-content: center; gap: 8px; 
-            letter-spacing: -0.3px;
+            letter-spacing: -0.3px; box-sizing: border-box;
         }
         .btn-main:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(255, 107, 53, 0.5); }
         .btn-main:active { transform: translateY(1px); }
@@ -132,18 +137,11 @@
         .btn-alt:hover { box-shadow: 0 15px 30px rgba(46, 196, 182, 0.4); }
 
         .slide-panel { 
-            position: fixed; 
-            bottom: -100%; left: 0; right: 0; 
-            max-width: 480px; margin: 0 auto;
-            max-height: 85vh; 
-            background: var(--glass-bg); 
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 32px 32px 0 0; 
-            z-index: 2000; 
-            transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
-            padding: 24px 20px 30px 20px; box-sizing: border-box; overflow-y: auto; 
-            box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.15);
+            position: fixed; bottom: -100%; left: 0; right: 0; max-width: 480px; margin: 0 auto;
+            max-height: 85vh; background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); border-radius: 32px 32px 0 0; z-index: 2000; 
+            transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1); padding: 24px 20px 30px 20px; 
+            box-sizing: border-box; overflow-y: auto; box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.15);
         }
         .slide-panel.active { bottom: 0; }
         
@@ -200,10 +198,12 @@
         <path d="M12 0C7.58 0 4 3.58 4 8c0 5.25 7 13 7 13s7-7.75 7-13c0-4.42-3.58-8-7-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
     </svg>
 
-    <!-- Banner guida in alto durante la scelta della posizione con Tasto X per annullare -->
+    <!-- Banner guida in alto con X integrata nel layout -->
     <div id="pin-picker-banner">
-        <button class="banner-close" onclick="cancelPinSelection()" title="Annulla">&times;</button>
-        <p>📍 Sposta la mappa finché il pin rosso è sul punto esatto del rifiuto.</p>
+        <div class="banner-top-row">
+            <p>📍 Sposta la mappa finché il pin rosso è sul punto esatto del rifiuto.</p>
+            <button class="banner-close" onclick="cancelPinSelection()" title="Annulla">&times;</button>
+        </div>
         <div class="banner-actions">
             <button class="btn-main" style="padding: 10px 16px; font-size: 13px; max-width: none;" onclick="useGPSForCenter()">📍 Usa GPS</button>
             <button class="btn-main btn-alt" style="padding: 10px 16px; font-size: 13px; max-width: none;" onclick="confirmMapPosition()">Conferma Posizione</button>
@@ -515,7 +515,6 @@
             openPanel('privacy-modal');
         }
 
-        // --- FASE 1: Selezione Posizione a Schermo Intero ---
         function startPinSelection() {
             document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
             document.getElementById('center-pin').style.display = 'block';
@@ -523,7 +522,6 @@
             showToast("Sposta la mappa sul punto esatto");
         }
 
-        // Funzione per annullare la selezione tramite la X del banner
         function cancelPinSelection() {
             document.getElementById('center-pin').style.display = 'none';
             document.getElementById('pin-picker-banner').style.display = 'none';
@@ -548,15 +546,12 @@
             const center = map.getCenter();
             lockedCoords = { lat: center.lat, lng: center.lng };
 
-            // Nasconde il pin guida e il banner
             document.getElementById('center-pin').style.display = 'none';
             document.getElementById('pin-picker-banner').style.display = 'none';
 
-            // Apre il modulo per inserire indirizzo testuale, foto e categoria
             openPanel('report-panel');
         }
 
-        // --- FASE 3: Invio Dati ---
         async function submitReport() {
             const addressText = document.getElementById('address-input').value.trim();
             const tipoRifiuto = document.getElementById('tipo-rifiuto-input').value;
