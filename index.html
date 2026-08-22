@@ -14,13 +14,32 @@
             --secondary: #00b4d8;
             --success: #2ec4b6;
             --dark: #1d3557; 
-            --glass-bg: rgba(255, 255, 255, 0.88);
-            --glass-border: rgba(255, 255, 255, 0.5);
+            --glass-bg: rgba(255, 255, 255, 0.92);
+            --glass-border: rgba(255, 255, 255, 0.6);
             --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
         body, html { margin: 0; padding: 0; height: 100%; height: 100dvh; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; background-color: #f0f4f8; }
         #map { height: 100%; height: 100dvh; width: 100vw; z-index: 1; }
+
+        /* Pin fisso al centro dello schermo in modalità posizionamento */
+        #center-pin {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%);
+            width: 44px; height: 44px; z-index: 900; pointer-events: none; display: none;
+            filter: drop-shadow(0 6px 8px rgba(0,0,0,0.35));
+            transition: transform 0.2s ease;
+        }
+        #center-pin.bounce { transform: translate(-50%, -115%); }
+
+        /* Banner guida in alto quando si sceglie la posizione sulla mappa */
+        #pin-picker-banner {
+            position: absolute; top: 20px; left: 20px; right: 20px; z-index: 1100;
+            background: var(--dark); color: white; padding: 14px 20px; border-radius: 20px;
+            display: none; flex-direction: column; gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            text-align: center;
+        }
+        #pin-picker-banner p { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.4; }
+        .banner-actions { display: flex; gap: 8px; justify-content: center; }
         
         #top-bar {
             position: absolute; top: 20px; left: 20px; right: 20px; z-index: 1000;
@@ -105,23 +124,19 @@
 
         .slide-panel { 
             position: fixed; 
-            top: 50%; left: 50%; 
-            transform: translate(-50%, -50%) scale(0.9); 
-            width: 90%; max-width: 440px; max-height: 80vh; 
+            bottom: -100%; left: 0; right: 0; 
+            max-width: 480px; margin: 0 auto;
+            max-height: 85vh; 
             background: var(--glass-bg); 
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
-            border-radius: 28px; 
-            z-index: 2000; opacity: 0; pointer-events: none;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
-            padding: 20px; box-sizing: border-box; overflow-y: auto; 
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            border-radius: 32px 32px 0 0; 
+            z-index: 2000; 
+            transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+            padding: 24px 20px 30px 20px; box-sizing: border-box; overflow-y: auto; 
+            box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.15);
         }
-        .slide-panel.active { 
-            transform: translate(-50%, -50%) scale(1); 
-            opacity: 1; 
-            pointer-events: auto; 
-        }
+        .slide-panel.active { bottom: 0; }
         
         .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .panel-header h2 { font-size: 20px; font-weight: 800; color: var(--dark); margin: 0; letter-spacing: -0.5px; }
@@ -142,13 +157,6 @@
             background: rgba(255, 255, 255, 0.9); color: var(--dark); transition: all 0.2s;
         }
         input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1); }
-        
-        .btn-secondary { 
-            background: rgba(255, 107, 53, 0.1); color: var(--primary); border: none; 
-            padding: 10px; border-radius: 10px; margin-top: 6px; cursor: pointer; width: 100%; 
-            font-weight: 700; font-size: 13px; transition: background 0.2s;
-        }
-        .btn-secondary:hover { background: rgba(255, 107, 53, 0.18); }
         
         .privacy-note { font-size: 11px; color: #e76f51; margin-top: 4px; line-height: 1.4; font-weight: 500; }
         .hint-text { font-size: 11px; color: #6c757d; margin-top: 4px; line-height: 1.4; }
@@ -178,6 +186,20 @@
 </head>
 <body>
 
+    <!-- Pin fisso al centro per la selezione -->
+    <svg id="center-pin" viewBox="0 0 24 24" fill="var(--primary)">
+        <path d="M12 0C7.58 0 4 3.58 4 8c0 5.25 7 13 7 13s7-7.75 7-13c0-4.42-3.58-8-7-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
+    </svg>
+
+    <!-- Banner guida in alto durante la scelta della posizione -->
+    <div id="pin-picker-banner">
+        <p>📍 Sposta la mappa finché il pin rosso è sul punto esatto del rifiuto.</p>
+        <div class="banner-actions">
+            <button class="btn-main" style="padding: 10px 16px; font-size: 13px; max-width: none;" onclick="useGPSForCenter()">📍 Usa GPS</button>
+            <button class="btn-main btn-alt" style="padding: 10px 16px; font-size: 13px; max-width: none;" onclick="confirmMapPosition()">Conferma Posizione</button>
+        </div>
+    </div>
+
     <div id="top-bar">
         <div class="brand-pill">
             <div class="brand-logo">PF</div>
@@ -200,7 +222,7 @@
             </div>
             <div id="step2" class="step">
                 <h2>Come segnalare 📍</h2>
-                <p>Posiziona il pin sul punto esatto, scrivi l'indirizzo con il numero civico e scatta una foto chiara per l'invio alla RAP.</p>
+                <p>Muovi la mappa per posizionare il pin centrale sul luogo esatto, conferma e scrivi l'indirizzo con il civico per la RAP.</p>
             </div>
             <div id="step3" class="step">
                 <h2>Chiudi il cerchio ✔️</h2>
@@ -236,7 +258,7 @@
     </div>
 
     <div id="ui-overlay">
-        <button class="btn-main" onclick="openPanel('report-panel')">✨ Nuova Segnalazione Rifiuti</button>
+        <button class="btn-main" onclick="startPinSelection()">✨ Nuova Segnalazione Rifiuti</button>
         <button class="btn-main btn-alt" onclick="openPanel('close-panel')">✔️ Risolvi con Codice</button>
         
         <a href="mailto:hi@palermofix.it" class="credits-tag" style="text-decoration: none;">
@@ -251,41 +273,26 @@
         </div>
         <p style="font-size: 13px; color: #666; margin-bottom: 15px;">I marker sulla mappa sono classificati per tipologia di criticità ambientale:</p>
         
-        <div class="legend-item">
-            <div class="legend-dot" style="background: #e63946;"></div>
-            <span>Micro-discarica / Sacchi abbandonati</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-dot" style="background: #ffb703;"></div>
-            <span>Cassonetti saturi o traboccanti</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-dot" style="background: #8d6e63;"></div>
-            <span>Abbandono rifiuti ingombranti</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-dot" style="background: #d4a373;"></div>
-            <span>Materiale edile e inerti</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-dot" style="background: #2ec4b6;"></div>
-            <span>Sfalci di potatura e verde</span>
-        </div>
+        <div class="legend-item"><div class="legend-dot" style="background: #e63946;"></div><span>Micro-discarica / Sacchi abbandonati</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background: #ffb703;"></div><span>Cassonetti saturi o traboccanti</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background: #8d6e63;"></div><span>Abbandono rifiuti ingombranti</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background: #d4a373;"></div><span>Materiale edile e inerti</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background: #2ec4b6;"></div><span>Sfalci di potatura e verde</span></div>
         
         <button class="btn-main" onclick="closePanel('legend-panel')" style="width: 100%; max-width: none; margin-top: 10px;">Chiudi</button>
     </div>
 
+    <!-- Modulo di inserimento dati (Fase 2) -->
     <div id="report-panel" class="slide-panel">
         <div class="panel-header">
-            <h2>Nuova Segnalazione</h2>
+            <h2>Compila Segnalazione</h2>
             <button class="close-btn" onclick="closePanel('report-panel')">&times;</button>
         </div>
         
         <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700; color: var(--dark); display: block; margin-bottom: 4px;">Indirizzo e Numero Civico (richiesto per la RAP)</label>
+            <label style="font-size: 12px; font-weight: 700; color: var(--dark); display: block; margin-bottom: 4px;">Indirizzo e Numero Civico (per la RAP)</label>
             <input type="text" id="address-input" placeholder="Es. Via Roma 15 o di fronte al civico 12">
-            <button class="btn-secondary" onclick="useGPS()">📍 Usa la mia posizione GPS sulla mappa</button>
-            <div class="hint-text">💡 Trascina il pin sulla mappa nel punto esatto dell'abbandono e scrivi l'indirizzo preciso comprensivo di civico.</div>
+            <div class="hint-text">💡 Scrivi l'indirizzo testuale chiaro. La posizione esatta è già stata bloccata sulla mappa.</div>
         </div>
 
         <div class="form-group">
@@ -311,7 +318,7 @@
         <div class="form-group" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 6px; text-align: left;">
             <input type="checkbox" id="privacy-check" style="width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primary); cursor: pointer;" required>
             <label for="privacy-check" style="font-size: 11px; color: #555; line-height: 1.4; cursor: pointer;">
-                Dichiaro di aver preso visione dell'<a href="#" onclick="openPrivacyModal(event)" style="color: var(--primary); font-weight: 700; text-decoration: underline;">Informativa sulla Privacy</a> e autorizzo il trattamento dei dati per la segnalazione civica.
+                Dichiaro di aver preso visione dell'<a href="#" onclick="openPrivacyModal(event)" style="color: var(--primary); font-weight: 700; text-decoration: underline;">Informativa sulla Privacy</a> e autorizzo il trattamento dei dati.
             </label>
         </div>
 
@@ -325,24 +332,15 @@
         </div>
         <div style="font-size: 13px; color: #444; line-height: 1.6; max-height: 45vh; overflow-y: auto; padding-right: 5px; text-align: left;">
             <p><b>1. Titolare del Trattamento</b><br>Palermo Fix è una piattaforma civica sperimentale. I dati raccolti sono trattati nel rispetto del Regolamento UE 2016/679 (GDPR).</p>
-            
-            <p><b>2. Dati Raccolti e Finalità</b><br>Raccogliamo le coordinate geografiche, l'indirizzo scritto dall'utente, la tipologia di rifiuto, una descrizione opzionale e fotografie caricate al solo scopo di mappare e gestire il decoro urbano e inoltrare le segnalazioni agli enti competenti.</p>
-            
+            <p><b>2. Dati Raccolti e Finalità</b><br>Raccogliamo le coordinate geografiche, l'indirizzo scritto dall'utente, la tipologia di rifiuto, una descrizione opzionale e fotografie caricate al solo scopo di mappare e gestire il decoro urbano.</p>
             <p><b>3. Immagini e Contenuti</b><br>È fatto divieto assoluto agli utenti di caricare fotografie contenenti dati personali identificabili (es. volti di persone, targhe di automobili).</p>
-            
             <p><b>4. Conservazione dei Dati</b><br>I dati rimangono visibili sulla mappa fino alla loro risoluzione o cancellazione tramite il codice segreto assegnato.</p>
-            
             <hr style="border: 0; border-top: 1px solid rgba(0,0,0,0.08); margin: 15px 0;">
-            
             <div style="text-align: center; padding: 0 0 5px 0;">
                 <p style="font-size: 11px; color: #777; font-style: italic; margin-bottom: 4px;">Progetto sviluppato da</p>
-                <h3 style="font-size: 18px; font-weight: 800; letter-spacing: 3px; margin: 0; line-height: 1;">
-                    <span class="anon-rosa">A.N.</span><span class="anon-nero">O.N.</span>
-                </h3>
+                <h3 style="font-size: 18px; font-weight: 800; letter-spacing: 3px; margin: 0; line-height: 1;"><span class="anon-rosa">A.N.</span><span class="anon-nero">O.N.</span></h3>
                 <p style="font-size: 10px; color: #aaa; margin: 4px 0 8px 0;">© 2026</p>
-                <a href="mailto:hi@palermofix.it" style="display: inline-block; color: var(--primary); font-size: 11px; font-weight: 700; text-decoration: none; border: 1.5px solid var(--primary); padding: 4px 12px; border-radius: 20px; background: rgba(255, 107, 53, 0.04);">
-                    ✉️ hi@palermofix.it
-                </a>
+                <a href="mailto:hi@palermofix.it" style="display: inline-block; color: var(--primary); font-size: 11px; font-weight: 700; text-decoration: none; border: 1.5px solid var(--primary); padding: 4px 12px; border-radius: 20px; background: rgba(255, 107, 53, 0.04);">✉️ hi@palermofix.it</a>
             </div>
         </div>
         <button class="btn-main" onclick="closePanel('privacy-modal')" style="width: 100%; max-width: none; margin-top: 10px;">Ho capito</button>
@@ -366,6 +364,7 @@
 
     <script>
         let currentWelcomeStep = 1;
+        let lockedCoords = null; // Memorizza le coordinate bloccate dalla mappa
 
         window.addEventListener('DOMContentLoaded', () => {
             if (!localStorage.getItem('palermoFix_intro_visto')) {
@@ -386,12 +385,7 @@
             }
             document.getElementById(`step${currentWelcomeStep}`).classList.add('active');
             document.getElementById(`dot${currentWelcomeStep}`).classList.add('active');
-            
-            if (currentWelcomeStep === 3) {
-                document.getElementById('welcome-next-btn').innerText = 'Inizia a usare l\'app';
-            } else {
-                document.getElementById('welcome-next-btn').innerText = 'Avanti';
-            }
+            document.getElementById('welcome-next-btn').innerText = (currentWelcomeStep === 3) ? 'Inizia a usare l\'app' : 'Avanti';
         }
 
         function nextWelcomeStep() {
@@ -420,8 +414,6 @@
         L.control.zoom({ position: 'topright' }).addTo(map);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
-        let marker;
-        let selectedCoords = null;
         let markersLayer = L.layerGroup().addTo(map);
 
         function showToast(msg) {
@@ -436,28 +428,17 @@
             document.getElementById('photo-overlay').style.display = 'flex';
         }
 
-        function closeZoom() {
-            document.getElementById('photo-overlay').style.display = 'none';
-        }
-
-        function closeCodeModal() {
-            document.getElementById('code-modal').style.display = 'none';
-        }
-
-        function generateCode() {
-            return Math.random().toString(36).substring(2, 8).toUpperCase();
-        }
+        function closeZoom() { document.getElementById('photo-overlay').style.display = 'none'; }
+        function closeCodeModal() { document.getElementById('code-modal').style.display = 'none'; }
+        function generateCode() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
 
         function loadMarkers() {
             markersLayer.clearLayers();
             db.collection("segnalazioni").get().then((querySnapshot) => {
                 let activeCount = 0;
-                
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    const stato = data.stato || "in_attesa";
-
-                    if (stato === "approvata" && data.lat && data.lng) {
+                    if ((data.stato || "in_attesa") === "approvata" && data.lat && data.lng) {
                         activeCount++;
                         let pinColor = "#ff6b35"; 
                         switch(data.tipoRifiuto) {
@@ -476,18 +457,11 @@
                                 ${data.foto ? `<img src="${data.foto}" onclick="zoomImage('${data.foto}')" title="Clicca per ingrandire">` : ''}
                             </div>
                         `;
-                        
                         L.circleMarker([data.lat, data.lng], {
-                            radius: 9,
-                            fillColor: pinColor,
-                            color: "#ffffff",
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 0.9
+                            radius: 9, fillColor: pinColor, color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
                         }).addTo(markersLayer).bindPopup(content);
                     }
                 });
-
                 document.getElementById('active-count-badge').innerText = activeCount + (activeCount === 1 ? ' attiva in zona' : ' attive in zona');
             }).catch((error) => {
                 console.error("Errore nel caricamento: ", error);
@@ -499,28 +473,18 @@
 
         async function resolveReportByCode() {
             const inputCode = document.getElementById('closure-code-input').value.trim().toUpperCase();
-            if (!inputCode) {
-                showToast("Inserisci un codice valido.");
-                return;
-            }
+            if (!inputCode) { showToast("Inserisci un codice valido."); return; }
 
             try {
                 const snapshot = await db.collection("segnalazioni").where("codiceChiusura", "==", inputCode).get();
-                
-                if (snapshot.empty) {
-                    showToast("Codice non valido.");
-                    return;
-                }
+                if (snapshot.empty) { showToast("Codice non valido."); return; }
 
                 const docId = snapshot.docs[0].id;
                 await db.collection("segnalazioni").doc(docId).update({ stato: "chiusa" });
-
                 showToast("Segnalazione risolta con successo!");
                 document.getElementById('closure-code-input').value = '';
                 closePanel('close-panel');
-                
                 setTimeout(() => { loadMarkers(); }, 500);
-
             } catch (error) {
                 console.error("Errore durante la chiusura: ", error);
                 showToast("Errore durante l'operazione.");
@@ -530,11 +494,6 @@
         function openPanel(panelId) { 
             document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
             document.getElementById(panelId).classList.add('active'); 
-
-            if(panelId === 'report-panel' && !selectedCoords) {
-                const center = map.getCenter();
-                setMarkerPosition(center.lat, center.lng);
-            }
         }
         
         function closePanel(panelId) { 
@@ -546,65 +505,58 @@
             openPanel('privacy-modal');
         }
 
-        function setMarkerPosition(lat, lng) {
-            if (marker) map.removeLayer(marker);
-            marker = L.marker([lat, lng], {draggable: true}).addTo(map);
-            marker.bindPopup("Trascina il pin sul punto esatto del problema").openPopup();
-            selectedCoords = { lat: lat, lng: lng };
-            
-            marker.on('dragend', function(e) {
-                var pos = marker.getLatLng();
-                selectedCoords = { lat: pos.lat, lng: pos.lng };
-            });
+        // --- FASE 1: Selezione Posizione a Schermo Intero ---
+        function startPinSelection() {
+            document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('center-pin').style.display = 'block';
+            document.getElementById('pin-picker-banner').style.display = 'flex';
+            showToast("Sposta la mappa sul punto esatto");
         }
 
-        function useGPS() {
+        function useGPSForCenter() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     pos => {
                         map.setView([pos.coords.latitude, pos.coords.longitude], 18);
-                        setMarkerPosition(pos.coords.latitude, pos.coords.longitude);
-                        showToast("Posizione GPS acquisita e pin posizionato!");
+                        showToast("Mappa centrata sulla tua posizione GPS!");
                     },
                     err => showToast("Impossibile recuperare il GPS.")
                 );
             } else {
-                showToast("Geolocalizzazione non supportata dal browser.");
+                showToast("Geolocalizzazione non supportata.");
             }
         }
 
+        // L'utente conferma la posizione del pin centrale: si passa alla Fase 2
+        function confirmMapPosition() {
+            const center = map.getCenter();
+            lockedCoords = { lat: center.lat, lng: center.lng };
+
+            // Nasconde il pin guida e il banner
+            document.getElementById('center-pin').style.display = 'none';
+            document.getElementById('pin-picker-banner').style.display = 'none';
+
+            // Apre il modulo per inserire indirizzo testuale, foto e categoria
+            openPanel('report-panel');
+        }
+
+        // --- FASE 3: Invio Dati ---
         async function submitReport() {
             const addressText = document.getElementById('address-input').value.trim();
             const tipoRifiuto = document.getElementById('tipo-rifiuto-input').value;
             const description = document.getElementById('desc-input').value;
             const privacyChecked = document.getElementById('privacy-check').checked;
             
-            if (!addressText) {
-                showToast("Inserisci l'indirizzo e il numero civico per la RAP!");
-                return;
-            }
-
-            if (!tipoRifiuto) {
-                showToast("Seleziona la tipologia di rifiuto!");
-                return;
-            }
-
-            if (!selectedCoords) { 
-                showToast("Seleziona la posizione sulla mappa trascinando il pin!"); 
-                return; 
-            }
-
-            if (!privacyChecked) {
-                showToast("Devi accettare l'informativa sulla privacy per procedere.");
-                return;
-            }
+            if (!addressText) { showToast("Inserisci l'indirizzo e il numero civico per la RAP!"); return; }
+            if (!tipoRifiuto) { showToast("Seleziona la tipologia di rifiuto!"); return; }
+            if (!privacyChecked) { showToast("Devi accettare l'informativa sulla privacy per procedere."); return; }
+            if (!lockedCoords) { showToast("Errore di posizione. Riprova a selezionarla sulla mappa."); return; }
 
             const imageInput = document.getElementById('image-input');
             let imageDataUrl = "";
 
             if (imageInput.files && imageInput.files[0]) {
                 const file = imageInput.files[0];
-                
                 imageDataUrl = await new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.onload = (e) => {
@@ -613,15 +565,11 @@
                             const canvas = document.createElement('canvas');
                             const MAX_WIDTH = 800;
                             const scaleSize = MAX_WIDTH / img.width;
-                            
                             canvas.width = scaleSize < 1 ? MAX_WIDTH : img.width;
                             canvas.height = scaleSize < 1 ? img.height * scaleSize : img.height;
-
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            
-                            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                            resolve(compressedDataUrl);
+                            resolve(canvas.toDataURL('image/jpeg', 0.7));
                         };
                         img.onerror = () => resolve("");
                         img.src = e.target.result;
@@ -637,8 +585,8 @@
                 await db.collection("segnalazioni").add({
                     indirizzoManuale: addressText,
                     tipoRifiuto: tipoRifiuto,
-                    lat: selectedCoords.lat,
-                    lng: selectedCoords.lng,
+                    lat: lockedCoords.lat,
+                    lng: lockedCoords.lng,
                     descrizione: description,
                     foto: imageDataUrl,
                     stato: "in_attesa",
@@ -654,8 +602,7 @@
                 document.getElementById('desc-input').value = '';
                 document.getElementById('image-input').value = '';
                 document.getElementById('privacy-check').checked = false;
-                if (marker) map.removeLayer(marker);
-                selectedCoords = null;
+                lockedCoords = null;
                 closePanel('report-panel');
                 loadMarkers();
             } catch (error) {
