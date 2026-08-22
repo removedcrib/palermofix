@@ -207,7 +207,7 @@
         #photo-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; display: none; justify-content: center; align-items: center; cursor: zoom-out; }
         #photo-overlay img { max-width: 92%; max-height: 92%; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
 
-        #code-modal, #duplicate-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 9998; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        #code-modal, #duplicate-modal, #confirm-captcha-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 9998; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .modal-content { background: #fff; padding: 30px 24px; border-radius: 28px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
         .modal-content h3 { margin-top: 0; color: var(--dark); font-size: 20px; font-weight: 800; }
         .code-box { background: #fff3ed; border: 2px dashed var(--primary); padding: 14px; font-size: 24px; font-weight: 800; letter-spacing: 3px; color: var(--primary); margin: 20px 0; border-radius: 14px; user-select: all; }
@@ -288,8 +288,23 @@
             <h3>Segnalazione Già Presente! 📍</h3>
             <p id="duplicate-msg" style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 15px;"></p>
             
-            <button class="btn-main" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 8px; font-size: 13px;" onclick="joinExistingReport()">👍 Conferma questo problema</button>
+            <button class="btn-main" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 8px; font-size: 13px;" onclick="openConfirmCaptchaModalFromDuplicate()">👍 Conferma questo problema</button>
             <button class="btn-main btn-alt" style="width: 100%; max-width: none; padding: 12px;" onclick="proceedAnyway()">✨ È un problema diverso</button>
+        </div>
+    </div>
+
+    <!-- Modale protetto da Turnstile per confermare un problema esistente -->
+    <div id="confirm-captcha-modal">
+        <div class="modal-content">
+            <h3>Conferma Problema 🛡️</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Completa la verifica anti-spam per confermare che questo problema persiste.</p>
+            
+            <div class="form-group" style="display: flex; justify-content: center; margin: 15px 0;">
+                <div class="cf-turnstile" data-sitekey="0x4AAAAAAEYWAjVXMfRAMSI0" data-theme="light"></div>
+            </div>
+
+            <button class="btn-main" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 8px; font-size: 13px;" onclick="confirmExistingReportWithCaptcha()">Conferma</button>
+            <button class="close-btn" style="width: 100%; height: auto; border-radius: 12px; background: rgba(0,0,0,0.05); padding: 10px; font-size: 13px; font-weight: 700;" onclick="closeConfirmCaptchaModal()">Annulla</button>
         </div>
     </div>
 
@@ -436,6 +451,7 @@
         let lockedCoords = null;
         let lastReportData = null;
         let pendingNearbyReport = null; // Memorizza il doppione trovato per la conferma
+        let activeTargetDocId = null;
 
         window.addEventListener('DOMContentLoaded', () => {
             if (!localStorage.getItem('palermoFix_intro_visto')) {
@@ -550,7 +566,7 @@
                                 <div style="margin-top: 10px; text-align: center;">
                                     ${alreadyConfirmed 
                                         ? '<span style="font-size: 11px; color: #2ec4b6; font-weight: 700;">✔️ Hai confermato questo problema</span>' 
-                                        : `<button onclick="confirmExistingReport('${doc.id}')" style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%;">Conferma Problema (+1)</button>`
+                                        : `<button onclick="openConfirmCaptchaModal('${doc.id}')" style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%;">Conferma Problema (+1)</button>`
                                     }
                                 </div>
                             </div>
@@ -582,15 +598,43 @@
 
         loadMarkers();
 
-        // Funzione per confermare direttamente da un pin esistente nel popup
-        async function confirmExistingReport(docId) {
+        function openConfirmCaptchaModal(docId) {
             if (localStorage.getItem(`confirmed_${docId}`) === 'true') {
                 showToast("Hai già confermato questa segnalazione.");
                 return;
             }
+            activeTargetDocId = docId;
+            document.getElementById('duplicate-modal').style.display = 'none';
+            document.getElementById('confirm-captcha-modal').style.display = 'flex';
+        }
+
+        function closeConfirmCaptchaModal() {
+            document.getElementById('confirm-captcha-modal').style.display = 'none';
+            activeTargetDocId = null;
+            if (typeof turnstile !== 'undefined') {
+                turnstile.reset();
+            }
+        }
+
+        function openConfirmCaptchaModalFromDuplicate() {
+            if (!pendingNearbyReport) return;
+            const docId = pendingNearbyReport.id;
+            pendingNearbyReport = null;
+            openConfirmCaptchaModal(docId);
+        }
+
+        // Funzione per confermare direttamente da un pin esistente con captcha protetto
+        async function confirmExistingReportWithCaptcha() {
+            if (!activeTargetDocId) return;
+
+            const turnstileResponse = document.querySelector('#confirm-captcha-modal [name="cf-turnstile-response"]')?.value;
+            if (!turnstileResponse) {
+                showToast("Completa la verifica anti-spam prima di confermare.");
+                return;
+            }
 
             try {
-                const docRef = db.collection("segnalazioni").doc(docId);
+                const docRef = db.collection("segnalazioni").doc(activeTargetDocId);
                 await db.runTransaction(async (transaction) => {
                     const doc = await transaction.get(docRef);
                     if (!doc.exists) throw "Segnalazione non esistente!";
@@ -598,8 +642,9 @@
                     transaction.update(docRef, { conferme: newConferme });
                 });
 
-                localStorage.setItem(`confirmed_${docId}`, 'true');
+                localStorage.setItem(`confirmed_${activeTargetDocId}`, 'true');
                 showToast("Grazie! Segnalazione confermata con successo.");
+                closeConfirmCaptchaModal();
                 map.closePopup();
                 loadMarkers();
             } catch (error) {
@@ -709,15 +754,6 @@
             }
         }
 
-        async function joinExistingReport() {
-            if (!pendingNearbyReport) return;
-            document.getElementById('duplicate-modal').style.display = 'none';
-            await confirmExistingReport(pendingNearbyReport.id);
-            pendingNearbyReport = null;
-            document.getElementById('center-pin').style.display = 'none';
-            document.getElementById('pin-picker-banner').style.display = 'none';
-        }
-
         function proceedAnyway() {
             document.getElementById('duplicate-modal').style.display = 'none';
             pendingNearbyReport = null;
@@ -734,7 +770,7 @@
             const privacyChecked = document.getElementById('privacy-check').checked;
             
             // Controllo token Turnstile Anti-Spam
-            const turnstileResponse = document.querySelector('[name="cf-turnstile-response"]')?.value;
+            const turnstileResponse = document.querySelector('#report-panel [name="cf-turnstile-response"]')?.value;
             if (!turnstileResponse) {
                 showToast("Completa la verifica anti-spam prima di inviare.");
                 return;
