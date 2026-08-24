@@ -118,7 +118,7 @@
             <p>Accesso Area Amministrativa</p>
             <div class="input-group">
                 <label>Email Amministratore</label>
-                <input type="email" id="email" placeholder="admin@palermofix.it">
+                <input type="email" id="email" placeholder="alessio.marinelli@yahoo.com">
             </div>
             <div class="input-group">
                 <label>Password</label>
@@ -145,7 +145,7 @@
             <h2 class="section-title">🗺️ Segnalazioni attive sulla mappa <span class="badge-count-active" id="count-active">0</span></h2>
             <div id="active-list" class="reports-grid"></div>
 
-            <!-- Sezione 3: Risolte / Chiuse (Pronte per la cancellazione definitiva) -->
+            <!-- Sezione 3: Risolte / Chiuse -->
             <h2 class="section-title">✔️ Segnalazioni chiuse / storicizzate <span class="badge-count-closed" id="count-closed">0</span></h2>
             <div id="closed-list" class="reports-grid"></div>
         </div>
@@ -158,7 +158,7 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnv3E",
+            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnV3E",
             authDomain: "palermofix-9cae9.firebaseapp.com",
             projectId: "palermofix-9cae9",
             storageBucket: "palermofix-9cae9.firebasestorage.app",
@@ -207,99 +207,109 @@
 
         function loadReports() {
             db.collection("segnalazioni").onSnapshot(snapshot => {
-                const pendingList = document.getElementById('pending-list');
-                const activeList = document.getElementById('active-list');
-                const closedList = document.getElementById('closed-list');
-                
-                const badgePending = document.getElementById('count-pending');
-                const badgeActive = document.getElementById('count-active');
-                const badgeClosed = document.getElementById('count-closed');
-                
-                pendingList.innerHTML = '';
-                activeList.innerHTML = '';
-                closedList.innerHTML = '';
+                // Recuperiamo i dati della collezione privata per le email
+                db.collection("segnalazioni_private").get().then(privateSnap => {
+                    const privateMap = {};
+                    privateSnap.forEach(pDoc => {
+                        privateMap[pDoc.id] = pDoc.data();
+                    });
 
-                let pendingCount = 0;
-                let activeCount = 0;
-                let closedCount = 0;
-
-                snapshot.forEach(doc => {
-                    const d = doc.data();
-                    const stato = d.stato || "in_attesa";
+                    const pendingList = document.getElementById('pending-list');
+                    const activeList = document.getElementById('active-list');
+                    const closedList = document.getElementById('closed-list');
                     
-                    const imgHtml = d.foto 
-                        ? `<div class="report-img-wrapper" onclick="window.open('${d.foto}', '_blank')"><img src="${d.foto}" class="report-img" title="Clicca per ingrandire"></div>` 
-                        : `<div class="report-img-wrapper"><div class="no-photo">Nessuna foto</div></div>`;
+                    const badgePending = document.getElementById('count-pending');
+                    const badgeActive = document.getElementById('count-active');
+                    const badgeClosed = document.getElementById('count-closed');
+                    
+                    pendingList.innerHTML = '';
+                    activeList.innerHTML = '';
+                    closedList.innerHTML = '';
 
-                    const dataFormatted = d.dataCreazione && d.dataCreazione.toDate ? d.dataCreazione.toDate().toLocaleString('it-IT') : 'Data non disponibile';
+                    let pendingCount = 0;
+                    let activeCount = 0;
+                    let closedCount = 0;
 
-                    if (stato === "in_attesa") {
-                        pendingCount++;
-                        pendingList.innerHTML += `
-                            <div class="report-card">
-                                <div class="report-info">
-                                    ${imgHtml}
-                                    <div class="report-details">
-                                        <h3>${d.tipoRifiuto || 'Segnalazione'}</h3>
-                                        <p><b>📍 Indirizzo:</b> ${d.indirizzoManuale || 'Non specificato'}</p>
-                                        <p><b>✉️ Email:</b> ${d.emailUtente || 'Non specificata'}</p>
-                                        <p><b>📝 Nota:</b> ${d.descrizione || 'Nessuna descrizione.'}</p>
-                                        <p style="font-size: 11px; color: #888; margin-top: 4px;">📅 Inviata il: ${dataFormatted}</p>
+                    snapshot.forEach(doc => {
+                        const d = doc.data();
+                        const stato = d.stato || "in_attesa";
+                        const privateData = privateMap[doc.id] || {};
+                        const emailUtente = privateData.emailUtente || d.emailUtente || 'Non specificata';
+                        
+                        const imgHtml = (d.foto && d.foto.length > 20) 
+                            ? `<div class="report-img-wrapper" onclick="window.open('${d.foto}', '_blank')"><img src="${d.foto}" class="report-img" title="Clicca per ingrandire"></div>` 
+                            : `<div class="report-img-wrapper"><div class="no-photo">Nessuna foto</div></div>`;
+
+                        const dataFormatted = d.dataCreazione && d.dataCreazione.toDate ? d.dataCreazione.toDate().toLocaleString('it-IT') : 'Data non disponibile';
+
+                        if (stato === "in_attesa") {
+                            pendingCount++;
+                            pendingList.innerHTML += `
+                                <div class="report-card">
+                                    <div class="report-info">
+                                        ${imgHtml}
+                                        <div class="report-details">
+                                            <h3>${d.tipoRifiuto || 'Segnalazione'}</h3>
+                                            <p><b>📍 Indirizzo:</b> ${d.indirizzoManuale || 'Non specificato'}</p>
+                                            <p><b>✉️ Email:</b> ${emailUtente}</p>
+                                            <p><b>📝 Nota:</b> ${d.descrizione || 'Nessuna descrizione.'}</p>
+                                            <p style="font-size: 11px; color: #888; margin-top: 4px;">📅 Inviata il: ${dataFormatted}</p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="actions">
-                                    <button class="btn btn-approve" onclick="approve('${doc.id}')">Approva e Pubblica</button>
-                                    <button class="btn btn-delete" onclick="deleteReport('${doc.id}')">Elimina</button>
-                                </div>
-                            </div>`;
-                    } else if (stato === "approvata") {
-                        activeCount++;
-                        activeList.innerHTML += `
-                            <div class="report-card active-pin">
-                                <div class="report-info">
-                                    ${imgHtml}
-                                    <div class="report-details">
-                                        <h3>${d.tipoRifiuto || 'Segnalazione'}</h3>
-                                        <p><b>📍 Indirizzo:</b> ${d.indirizzoManuale || 'Non specificato'}</p>
-                                        <p><b>👥 Conferme:</b> ${d.conferme || 1}</p>
-                                        <p><b>✉️ Email:</b> ${d.emailUtente || 'Non specificata'}</p>
-                                        <p><b>📝 Nota:</b> ${d.descrizione || 'Nessuna descrizione.'}</p>
-                                        <p style="font-size: 11px; color: #888; margin-top: 4px;">📅 Pubblicata il: ${dataFormatted}</p>
+                                    <div class="actions">
+                                        <button class="btn btn-approve" onclick="approve('${doc.id}')">Approva e Pubblica</button>
+                                        <button class="btn btn-delete" onclick="deleteReport('${doc.id}')">Elimina</button>
                                     </div>
-                                </div>
-                                <div class="actions">
-                                    <button class="btn btn-resolve" onclick="resolveReportAdmin('${doc.id}')">✔️ Segna come Risolta</button>
-                                    <button class="btn btn-delete" onclick="deleteReport('${doc.id}')">Elimina</button>
-                                </div>
-                            </div>`;
-                    } else if (stato === "chiusa") {
-                        closedCount++;
-                        closedList.innerHTML += `
-                            <div class="report-card closed-pin">
-                                <div class="report-info">
-                                    ${imgHtml}
-                                    <div class="report-details">
-                                        <h3>${d.tipoRifiuto || 'Segnalazione'} (Risolta)</h3>
-                                        <p><b>📍 Indirizzo:</b> ${d.indirizzoManuale || 'Non specificato'}</p>
-                                        <p><b>👥 Conferme finali:</b> ${d.conferme || 1}</p>
-                                        <p><b>✉️ Email:</b> ${d.emailUtente || 'Non specificata'}</p>
-                                        <p style="font-size: 11px; color: #888; margin-top: 4px;">📅 Data creazione: ${dataFormatted}</p>
+                                </div>`;
+                        } else if (stato === "approvata") {
+                            activeCount++;
+                            activeList.innerHTML += `
+                                <div class="report-card active-pin">
+                                    <div class="report-info">
+                                        ${imgHtml}
+                                        <div class="report-details">
+                                            <h3>${d.tipoRifiuto || 'Segnalazione'}</h3>
+                                            <p><b>📍 Indirizzo:</b> ${d.indirizzoManuale || 'Non specificato'}</p>
+                                            <p><b>👥 Conferme:</b> ${d.conferme || 1}</p>
+                                            <p><b>✉️ Email:</b> ${emailUtente}</p>
+                                            <p><b>📝 Nota:</b> ${d.descrizione || 'Nessuna descrizione.'}</p>
+                                            <p style="font-size: 11px; color: #888; margin-top: 4px;">📅 Pubblicata il: ${dataFormatted}</p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="actions">
-                                    <button class="btn btn-delete" style="width: 100%;" onclick="deleteReport('${doc.id}')">🗑️ Elimina Definitivamente dal DB</button>
-                                </div>
-                            </div>`;
-                    }
+                                    <div class="actions">
+                                        <button class="btn btn-resolve" onclick="resolveReportAdmin('${doc.id}')">✔️ Segna come Risolta</button>
+                                        <button class="btn btn-delete" onclick="deleteReport('${doc.id}')">Elimina</button>
+                                    </div>
+                                </div>`;
+                        } else if (stato === "chiusa") {
+                            closedCount++;
+                            closedList.innerHTML += `
+                                <div class="report-card closed-pin">
+                                    <div class="report-info">
+                                        ${imgHtml}
+                                        <div class="report-details">
+                                            <h3>${d.tipoRifiuto || 'Segnalazione'} (Risolta)</h3>
+                                            <p><b>📍 Indirizzo:</b> ${d.indirizzoManuale || 'Non specificato'}</p>
+                                            <p><b>👥 Conferme finali:</b> ${d.conferme || 1}</p>
+                                            <p><b>✉️ Email:</b> ${emailUtente}</p>
+                                            <p style="font-size: 11px; color: #888; margin-top: 4px;">📅 Data creazione: ${dataFormatted}</p>
+                                        </div>
+                                    </div>
+                                    <div class="actions">
+                                        <button class="btn btn-delete" style="width: 100%;" onclick="deleteReport('${doc.id}')">🗑️ Elimina Definitivamente dal DB</button>
+                                    </div>
+                                </div>`;
+                        }
+                    });
+
+                    badgePending.innerText = pendingCount;
+                    badgeActive.innerText = activeCount;
+                    badgeClosed.innerText = closedCount;
+
+                    if (pendingCount === 0) pendingList.innerHTML = `<div class="empty-state">Nessuna segnalazione in attesa.</div>`;
+                    if (activeCount === 0) activeList.innerHTML = `<div class="empty-state">Nessuna segnalazione attiva sulla mappa.</div>`;
+                    if (closedCount === 0) closedList.innerHTML = `<div class="empty-state">Nessuna segnalazione chiusa in archivio.</div>`;
                 });
-
-                badgePending.innerText = pendingCount;
-                badgeActive.innerText = activeCount;
-                badgeClosed.innerText = closedCount;
-
-                if (pendingCount === 0) pendingList.innerHTML = `<div class="empty-state">Nessuna segnalazione in attesa.</div>`;
-                if (activeCount === 0) activeList.innerHTML = `<div class="empty-state">Nessuna segnalazione attiva sulla mappa.</div>`;
-                if (closedCount === 0) closedList.innerHTML = `<div class="empty-state">Nessuna segnalazione chiusa in archivio.</div>`;
             });
         }
 
@@ -317,11 +327,17 @@
             }
         }
 
-        function deleteReport(id) {
+        async function deleteReport(id) {
             if (confirm("Sei sicuro di voler eliminare definitivamente questo documento da Firebase? L'azione è irreversibile.")) {
-                db.collection("segnalazioni").doc(id).delete()
-                    .then(() => showToast("Documento eliminato definitivamente dal database."))
-                    .catch(e => showToast("Errore durante l'eliminazione: " + e.message));
+                try {
+                    await Promise.all([
+                        db.collection("segnalazioni").doc(id).delete(),
+                        db.collection("segnalazioni_private").doc(id).delete().catch(() => {})
+                    ]);
+                    showToast("Documento eliminato definitivamente dal database.");
+                } catch (e) {
+                    showToast("Errore durante l'eliminazione: " + e.message);
+                }
             }
         }
 
@@ -333,19 +349,28 @@
                     return;
                 }
 
+                const privateSnap = await db.collection("segnalazioni_private").get();
+                const privateMap = {};
+                privateSnap.forEach(pDoc => {
+                    privateMap[pDoc.id] = pDoc.data();
+                });
+
                 let csvContent = "data:text/csv;charset=utf-8,";
                 csvContent += "ID,Indirizzo,Tipologia,Stato,Conferme,Latitudine,Longitudine,Email Utente,Data Creazione\r\n";
 
                 snapshot.forEach(doc => {
                     const d = doc.data();
                     const id = doc.id;
+                    const privateData = privateMap[id] || {};
+                    const emailUtente = privateData.emailUtente || d.emailUtente || '';
+
                     const indirizzo = `"${(d.indirizzoManuale || '').replace(/"/g, '""')}"`;
                     const tipo = `"${(d.tipoRifiuto || '').replace(/"/g, '""')}"`;
                     const stato = d.stato || "in_attesa";
                     const conferme = d.conferme || 1;
                     const lat = d.lat || "";
                     const lng = d.lng || "";
-                    const email = `"${(d.emailUtente || '').replace(/"/g, '""')}"`;
+                    const email = `"${emailUtente.replace(/"/g, '""')}"`;
                     let dataCreazione = "";
                     if (d.dataCreazione && d.dataCreazione.toDate) {
                         dataCreazione = d.dataCreazione.toDate().toISOString();
