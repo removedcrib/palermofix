@@ -172,7 +172,7 @@
             max-height: 85vh; background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border); border-radius: 32px 32px 0 0; z-index: 2000; 
             transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1); padding: 24px 20px 30px 20px; 
-            box-sizing: border-box; overflow-y: auto; box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.15);
+            box-sizing: border-box; overflow-y: auto; -webkit-overflow-scrolling: touch; box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.15);
         }
         .slide-panel.active { bottom: 0; }
         
@@ -189,6 +189,8 @@
         .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
 
         .form-group { margin-bottom: 12px; position: relative; }
+        .form-group iframe { max-width: 100%; margin: 0 auto; min-height: 65px; }
+        
         input, textarea, select { 
             width: 100%; padding: 12px 14px; border: 2px solid rgba(0,0,0,0.06); 
             border-radius: 12px; box-sizing: border-box; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif;
@@ -607,6 +609,9 @@
             activeTargetDocId = docId;
             document.getElementById('duplicate-modal').style.display = 'none';
             document.getElementById('confirm-captcha-modal').style.display = 'flex';
+            if (typeof turnstile !== 'undefined') {
+                turnstile.reset();
+            }
         }
 
         function closeConfirmCaptchaModal() {
@@ -682,6 +687,9 @@
         function openPanel(panelId) { 
             document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
             document.getElementById(panelId).classList.add('active'); 
+            if (typeof turnstile !== 'undefined') {
+                turnstile.reset();
+            }
         }
         
         function closePanel(panelId) { 
@@ -753,7 +761,6 @@
                 }
             } catch (err) {
                 console.error("Errore controllo prossimità:", err);
-                // In caso di errore, facciamo comunque procedere l'utente
                 document.getElementById('center-pin').style.display = 'none';
                 document.getElementById('pin-picker-banner').style.display = 'none';
                 openPanel('report-panel');
