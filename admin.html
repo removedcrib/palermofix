@@ -158,7 +158,7 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnv3E",
+            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnV3E",
             authDomain: "palermofix-9cae9.firebaseapp.com",
             projectId: "palermofix-9cae9",
             storageBucket: "palermofix-9cae9.firebasestorage.app",
@@ -207,11 +207,17 @@
 
         function loadReports() {
             db.collection("segnalazioni").onSnapshot(snapshot => {
-                // Recuperiamo i dati della collezione privata per le email
+                // Recuperiamo i dati della collezione privata mappandoli tramite reportId
                 db.collection("segnalazioni_private").get().then(privateSnap => {
                     const privateMap = {};
                     privateSnap.forEach(pDoc => {
-                        privateMap[pDoc.id] = pDoc.data();
+                        const data = pDoc.data();
+                        if (data.reportId) {
+                            privateMap[data.reportId] = {
+                                email: data.emailUtente,
+                                codeDocId: pDoc.id
+                            };
+                        }
                     });
 
                     const pendingList = document.getElementById('pending-list');
@@ -233,8 +239,9 @@
                     snapshot.forEach(doc => {
                         const d = doc.data();
                         const stato = d.stato || "in_attesa";
-                        const privateData = privateMap[doc.id] || {};
-                        const emailUtente = privateData.emailUtente || d.emailUtente || 'Non specificata';
+                        const privateInfo = privateMap[doc.id] || {};
+                        const emailUtente = privateInfo.email || d.emailUtente || 'Non specificata';
+                        const codeDocId = privateInfo.codeDocId || '';
                         
                         const imgHtml = (d.foto && d.foto.length > 20) 
                             ? `<div class="report-img-wrapper" onclick="window.open('${d.foto}', '_blank')"><img src="${d.foto}" class="report-img" title="Clicca per ingrandire"></div>` 
@@ -258,7 +265,7 @@
                                     </div>
                                     <div class="actions">
                                         <button class="btn btn-approve" onclick="approve('${doc.id}')">Approva e Pubblica</button>
-                                        <button class="btn btn-delete" onclick="deleteReport('${doc.id}')">Elimina</button>
+                                        <button class="btn btn-delete" onclick="deleteReport('${doc.id}', '${codeDocId}')">Elimina</button>
                                     </div>
                                 </div>`;
                         } else if (stato === "approvata") {
@@ -278,7 +285,7 @@
                                     </div>
                                     <div class="actions">
                                         <button class="btn btn-resolve" onclick="resolveReportAdmin('${doc.id}')">✔️ Segna come Risolta</button>
-                                        <button class="btn btn-delete" onclick="deleteReport('${doc.id}')">Elimina</button>
+                                        <button class="btn btn-delete" onclick="deleteReport('${doc.id}', '${codeDocId}')">Elimina</button>
                                     </div>
                                 </div>`;
                         } else if (stato === "chiusa") {
@@ -296,7 +303,7 @@
                                         </div>
                                     </div>
                                     <div class="actions">
-                                        <button class="btn btn-delete" style="width: 100%;" onclick="deleteReport('${doc.id}')">🗑️ Elimina Definitivamente dal DB</button>
+                                        <button class="btn btn-delete" style="width: 100%;" onclick="deleteReport('${doc.id}', '${codeDocId}')">🗑️ Elimina Definitivamente dal DB</button>
                                     </div>
                                 </div>`;
                         }
@@ -327,13 +334,14 @@
             }
         }
 
-        async function deleteReport(id) {
+        async function deleteReport(publicId, codeDocId) {
             if (confirm("Sei sicuro di voler eliminare definitivamente questo documento da Firebase? L'azione è irreversibile.")) {
                 try {
-                    await Promise.all([
-                        db.collection("segnalazioni").doc(id).delete(),
-                        db.collection("segnalazioni_private").doc(id).delete().catch(() => {})
-                    ]);
+                    const promises = [db.collection("segnalazioni").doc(publicId).delete()];
+                    if (codeDocId) {
+                        promises.push(db.collection("segnalazioni_private").doc(codeDocId).delete().catch(() => {}));
+                    }
+                    await Promise.all(promises);
                     showToast("Documento eliminato definitivamente dal database.");
                 } catch (e) {
                     showToast("Errore durante l'eliminazione: " + e.message);
@@ -352,7 +360,10 @@
                 const privateSnap = await db.collection("segnalazioni_private").get();
                 const privateMap = {};
                 privateSnap.forEach(pDoc => {
-                    privateMap[pDoc.id] = pDoc.data();
+                    const data = pDoc.data();
+                    if (data.reportId) {
+                        privateMap[data.reportId] = data.emailUtente;
+                    }
                 });
 
                 let csvContent = "data:text/csv;charset=utf-8,";
@@ -361,8 +372,7 @@
                 snapshot.forEach(doc => {
                     const d = doc.data();
                     const id = doc.id;
-                    const privateData = privateMap[id] || {};
-                    const emailUtente = privateData.emailUtente || d.emailUtente || '';
+                    const emailUtente = privateMap[id] || d.emailUtente || '';
 
                     const indirizzo = `"${(d.indirizzoManuale || '').replace(/"/g, '""')}"`;
                     const tipo = `"${(d.tipoRifiuto || '').replace(/"/g, '""')}"`;
