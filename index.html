@@ -28,8 +28,8 @@
     <meta name="theme-color" content="#1d3557">
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Script Cloudflare Turnstile -->
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <!-- Script Cloudflare Turnstile (render explicit) -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
     <!-- Script EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script type="text/javascript">
@@ -303,7 +303,7 @@
             <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Completa la verifica anti-spam per confermare che questo problema persiste.</p>
             
             <div class="form-group" style="display: flex; justify-content: center; margin: 15px 0;">
-                <div class="cf-turnstile" data-sitekey="0x4AAAAAAEYWAjVXMfRAMSI0" data-theme="light"></div>
+                <div id="modal-turnstile-container"></div>
             </div>
 
             <button class="btn-main" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 8px; font-size: 13px;" onclick="confirmExistingReportWithCaptcha()">Conferma</button>
@@ -397,7 +397,7 @@
 
         <!-- Widget Anti-Spam Cloudflare Turnstile -->
         <div class="form-group" style="display: flex; justify-content: center; margin: 15px 0;">
-            <div class="cf-turnstile" data-sitekey="0x4AAAAAAEYWAjVXMfRAMSI0" data-theme="light"></div>
+            <div id="form-turnstile-container"></div>
         </div>
 
         <div class="form-group" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 6px; text-align: left;">
@@ -455,6 +455,10 @@
         let lastReportData = null;
         let pendingNearbyReport = null; // Memorizza il doppione trovato per la conferma
         let activeTargetDocId = null;
+
+        let modalTurnstileWidgetId = null;
+        let formTurnstileWidgetId = null;
+        const SITE_KEY = "0x4AAAAAAEYWAjVXMfRAMSI0";
 
         window.addEventListener('DOMContentLoaded', () => {
             if (!localStorage.getItem('palermoFix_intro_visto')) {
@@ -609,16 +613,27 @@
             activeTargetDocId = docId;
             document.getElementById('duplicate-modal').style.display = 'none';
             document.getElementById('confirm-captcha-modal').style.display = 'flex';
-            if (typeof turnstile !== 'undefined') {
-                turnstile.reset();
-            }
+            
+            // Renderizziamo il Turnstile in modo esplicito ora che il modale è visibile
+            setTimeout(() => {
+                if (typeof turnstile !== 'undefined') {
+                    if (modalTurnstileWidgetId !== null) {
+                        turnstile.remove(modalTurnstileWidgetId);
+                    }
+                    modalTurnstileWidgetId = turnstile.render('#modal-turnstile-container', {
+                        sitekey: SITE_KEY,
+                        theme: 'light'
+                    });
+                }
+            }, 100);
         }
 
         function closeConfirmCaptchaModal() {
             document.getElementById('confirm-captcha-modal').style.display = 'none';
             activeTargetDocId = null;
-            if (typeof turnstile !== 'undefined') {
-                turnstile.reset();
+            if (typeof turnstile !== 'undefined' && modalTurnstileWidgetId !== null) {
+                turnstile.remove(modalTurnstileWidgetId);
+                modalTurnstileWidgetId = null;
             }
         }
 
@@ -638,7 +653,11 @@
         async function confirmExistingReportWithCaptcha() {
             if (!activeTargetDocId) return;
 
-            const turnstileResponse = document.querySelector('#confirm-captcha-modal [name="cf-turnstile-response"]')?.value;
+            let turnstileResponse = "";
+            if (typeof turnstile !== 'undefined' && modalTurnstileWidgetId !== null) {
+                turnstileResponse = turnstile.getResponse(modalTurnstileWidgetId);
+            }
+
             if (!turnstileResponse) {
                 showToast("Completa la verifica anti-spam prima di confermare.");
                 return;
@@ -687,13 +706,28 @@
         function openPanel(panelId) { 
             document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
             document.getElementById(panelId).classList.add('active'); 
-            if (typeof turnstile !== 'undefined') {
-                turnstile.reset();
+            
+            if (panelId === 'report-panel') {
+                setTimeout(() => {
+                    if (typeof turnstile !== 'undefined') {
+                        if (formTurnstileWidgetId !== null) {
+                            turnstile.remove(formTurnstileWidgetId);
+                        }
+                        formTurnstileWidgetId = turnstile.render('#form-turnstile-container', {
+                            sitekey: SITE_KEY,
+                            theme: 'light'
+                        });
+                    }
+                }, 100);
             }
         }
         
         function closePanel(panelId) { 
             document.getElementById(panelId).classList.remove('active'); 
+            if (panelId === 'report-panel' && typeof turnstile !== 'undefined' && formTurnstileWidgetId !== null) {
+                turnstile.remove(formTurnstileWidgetId);
+                formTurnstileWidgetId = null;
+            }
         }
 
         function openPrivacyModal(e) {
@@ -783,7 +817,11 @@
             const privacyChecked = document.getElementById('privacy-check').checked;
             
             // Controllo token Turnstile Anti-Spam
-            const turnstileResponse = document.querySelector('#report-panel [name="cf-turnstile-response"]')?.value;
+            let turnstileResponse = "";
+            if (typeof turnstile !== 'undefined' && formTurnstileWidgetId !== null) {
+                turnstileResponse = turnstile.getResponse(formTurnstileWidgetId);
+            }
+
             if (!turnstileResponse) {
                 showToast("Completa la verifica anti-spam prima di inviare.");
                 return;
@@ -873,10 +911,6 @@
                 document.getElementById('image-input').value = '';
                 document.getElementById('privacy-check').checked = false;
                 
-                if (typeof turnstile !== 'undefined') {
-                    turnstile.reset();
-                }
-
                 lockedCoords = null;
                 closePanel('report-panel');
                 loadMarkers();
