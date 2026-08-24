@@ -683,16 +683,18 @@
             }
         }
 
+        // Risoluzione tramite codice interrogando la collezione privata blindata
         async function resolveReportByCode() {
             const inputCode = document.getElementById('closure-code-input').value.trim().toUpperCase();
             if (!inputCode) { showToast("Inserisci un codice valido."); return; }
 
             try {
-                const snapshot = await db.collection("segnalazioni").where("codiceChiusura", "==", inputCode).get();
+                const snapshot = await db.collection("segnalazioni_private").where("codiceChiusura", "==", inputCode).get();
                 if (snapshot.empty) { showToast("Codice non valido."); return; }
 
                 const docId = snapshot.docs[0].id;
                 await db.collection("segnalazioni").doc(docId).update({ stato: "chiusa" });
+                
                 showToast("Segnalazione risolta con successo!");
                 document.getElementById('closure-code-input').value = '';
                 closePanel('close-panel');
@@ -875,18 +877,23 @@
 
                 await emailjs.send("service_00o5cml", "template_0sfzma5", templateParams);
 
-                // 2. Salvataggio su Firestore con campo conferme inizializzato a 1
+                // 2. Salvataggio dati PUBBLICI (Zero email, Zero codice)
                 const docRef = await db.collection("segnalazioni").add({
                     indirizzoManuale: addressText,
-                    emailUtente: userEmail,
                     tipoRifiuto: tipoRifiuto,
                     lat: lockedCoords.lat,
                     lng: lockedCoords.lng,
                     descrizione: description,
                     foto: imageDataUrl,
                     stato: "in_attesa",
-                    codiceChiusura: closureCode,
                     conferme: 1,
+                    dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // 3. Salvataggio dati PRIVATI nella collezione blindata
+                await db.collection("segnalazioni_private").doc(docRef.id).set({
+                    emailUtente: userEmail,
+                    codiceChiusura: closureCode,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
