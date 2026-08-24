@@ -683,17 +683,21 @@
             }
         }
 
-        // Risoluzione tramite codice interrogando la collezione privata blindata
+        // Risoluzione tramite codice con lettura puntuale del documento (ID = codice)
         async function resolveReportByCode() {
             const inputCode = document.getElementById('closure-code-input').value.trim().toUpperCase();
             if (!inputCode) { showToast("Inserisci un codice valido."); return; }
 
             try {
-                const snapshot = await db.collection("segnalazioni_private").where("codiceChiusura", "==", inputCode).get();
-                if (snapshot.empty) { showToast("Codice non valido."); return; }
+                // Lettura diretta per ID consentita da 'allow get' nelle regole Firestore
+                const docSnap = await db.collection("segnalazioni_private").doc(inputCode).get();
+                if (!docSnap.exists) { showToast("Codice non valido."); return; }
 
-                const docId = snapshot.docs[0].id;
-                await db.collection("segnalazioni").doc(docId).update({ stato: "chiusa" });
+                const privateData = docSnap.data();
+                const reportId = privateData.reportId;
+
+                // Aggiornamento del documento pubblico
+                await db.collection("segnalazioni").doc(reportId).update({ stato: "chiusa" });
                 
                 showToast("Segnalazione risolta con successo!");
                 document.getElementById('closure-code-input').value = '';
@@ -890,10 +894,10 @@
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // 3. Salvataggio dati PRIVATI nella collezione blindata
-                await db.collection("segnalazioni_private").doc(docRef.id).set({
+                // 3. Salvataggio dati PRIVATI usabile per ID (usando closureCode come ID documento)
+                await db.collection("segnalazioni_private").doc(closureCode).set({
+                    reportId: docRef.id,
                     emailUtente: userEmail,
-                    codiceChiusura: closureCode,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
