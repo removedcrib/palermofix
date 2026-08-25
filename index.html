@@ -202,9 +202,16 @@
         .hint-text { font-size: 11px; color: #6c757d; margin-top: 4px; line-height: 1.4; }
 
         .leaflet-popup-content-wrapper { border-radius: 16px; padding: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
-        .custom-popup img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 10px; margin-top: 8px; cursor: zoom-in; }
         .custom-popup b { font-size: 14px; }
         .custom-popup p { margin: 6px 0 0 0; font-size: 13px; color: #555; }
+
+        /* Carousel orizzontale foto popup */
+        .photo-carousel { display: flex; gap: 8px; overflow-x: auto; margin-top: 8px; padding-bottom: 6px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+        .photo-carousel::-webkit-scrollbar { height: 4px; }
+        .photo-carousel::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        .photo-carousel-item { position: relative; flex: 0 0 100%; scroll-snap-align: start; }
+        .photo-carousel-item img { width: 100%; height: 140px; object-fit: cover; border-radius: 10px; cursor: zoom-in; }
+        .photo-badge { position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; }
 
         #photo-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; display: none; justify-content: center; align-items: center; cursor: zoom-out; }
         #photo-overlay img { max-width: 92%; max-height: 92%; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
@@ -349,6 +356,8 @@
         
         <div class="legend-item"><div class="legend-dot" style="background: #e63946;"></div><span>Micro-discarica / Sacchi abbandonati</span></div>
         <div class="legend-item"><div class="legend-dot" style="background: #ffb703;"></div><span>Cassonetti saturi o traboccanti</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background: #7209b7;"></div><span>Cestini gettacarte stradali saturi</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background: #4a4e69;"></div><span>Mancato spazzamento / Marciapiedi sporchi</span></div>
         <div class="legend-item"><div class="legend-dot" style="background: #8d6e63;"></div><span>Abbandono rifiuti ingombranti</span></div>
         <div class="legend-item"><div class="legend-dot" style="background: #d4a373;"></div><span>Materiale edile e inerti</span></div>
         <div class="legend-item"><div class="legend-dot" style="background: #2ec4b6;"></div><span>Sfalci di potatura e verde</span></div>
@@ -379,15 +388,18 @@
             <select id="tipo-rifiuto-input">
                 <option value="" disabled selected>Seleziona tipologia rifiuto...</option>
                 <option value="Cassonetti saturi o traboccanti">Cassonetti saturi o traboccanti</option>
-                <option value="Abbandono rifiuti ingombranti">Abbandono rifiuti ingombranti</option>
+                <option value="Cestini gettacarte stradali saturi">Cestini gettacarte stradali saturi</option>
+                <option value="Mancato spazzamento / Marciapiedi sporchi">Mancato spazzamento / Marciapiedi sporchi</option>
                 <option value="Micro-discarica / Sacchi abbandonati">Micro-discarica / Sacchi abbandonati</option>
+                <option value="Abbandono rifiuti ingombranti">Abbandono rifiuti ingombranti</option>
                 <option value="Materiale edile e inerti">Materiale edile e inerti</option>
                 <option value="Sfalci di potatura e verde">Sfalci di potatura e verde</option>
             </select>
         </div>
         
         <div class="form-group">
-            <input type="file" id="image-input" accept="image/*" capture="environment">
+            <label style="font-size: 12px; font-weight: 700; color: var(--dark); display: block; margin-bottom: 4px;">Foto (fino a 3 immagini)</label>
+            <input type="file" id="image-input" accept="image/*" multiple>
             <div class="privacy-note">⚠️ Nota: Evita di includere volti di persone o targhe di veicoli nelle foto.</div>
         </div>
         
@@ -552,16 +564,37 @@
                         switch(data.tipoRifiuto) {
                             case "Micro-discarica / Sacchi abbandonati": pinColor = "#e63946"; break;
                             case "Cassonetti saturi o traboccanti": pinColor = "#ffb703"; break;
+                            case "Cestini gettacarte stradali saturi": pinColor = "#7209b7"; break;
+                            case "Mancato spazzamento / Marciapiedi sporchi": pinColor = "#4a4e69"; break;
                             case "Abbandono rifiuti ingombranti": pinColor = "#8d6e63"; break;
                             case "Materiale edile e inerti": pinColor = "#d4a373"; break;
                             case "Sfalci di potatura e verde": pinColor = "#2ec4b6"; break;
                         }
 
-                        // Se ci sono più conferme, intensifichiamo o scaliamo il colore
                         if (conferme >= 5) pinColor = "#900C3F";
 
-                        // Controllo se l'utente ha già votato questa segnalazione via localStorage
                         const alreadyConfirmed = localStorage.getItem(`confirmed_${doc.id}`) === 'true';
+
+                        // Gestione delle immagini (singola o array fino a 3)
+                        let photoHtml = "";
+                        let photoList = [];
+                        if (Array.isArray(data.foto) && data.foto.length > 0) {
+                            photoList = data.foto;
+                        } else if (typeof data.foto === "string" && data.foto.length > 20) {
+                            photoList = [data.foto];
+                        }
+
+                        if (photoList.length > 0) {
+                            photoHtml = `<div class="photo-carousel">`;
+                            photoList.forEach((src, idx) => {
+                                photoHtml += `
+                                    <div class="photo-carousel-item">
+                                        <img src="${src}" onclick="zoomImage('${src}')" title="Clicca per ingrandire">
+                                        ${photoList.length > 1 ? `<span class="photo-badge">${idx + 1}/${photoList.length}</span>` : ''}
+                                    </div>`;
+                            });
+                            photoHtml += `</div>`;
+                        }
 
                         const content = `
                             <div class="custom-popup" style="text-align: left;">
@@ -569,7 +602,7 @@
                                 <p style="margin: 4px 0;"><b>Indirizzo:</b> ${data.indirizzoManuale || 'Non specificato'}</p>
                                 <p style="margin: 4px 0;">👥 <b>Segnalazioni/Conferme:</b> ${conferme}</p>
                                 <p style="margin: 4px 0;">${data.descrizione || ''}</p>
-                                ${data.foto ? `<img src="${data.foto}" onclick="zoomImage('${data.foto}')" title="Clicca per ingrandire">` : ''}
+                                ${photoHtml}
                                 <div style="margin-top: 10px; text-align: center;">
                                     ${alreadyConfirmed 
                                         ? '<span style="font-size: 11px; color: #2ec4b6; font-weight: 700;">✔️ Hai confermato questo problema</span>' 
@@ -579,7 +612,6 @@
                             </div>
                         `;
 
-                        // Marker personalizzato con badge numerico se conferme > 1
                         const iconHtml = `
                             <div style="background-color: ${pinColor}; width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 6px rgba(0,0,0,0.3); border: 2px solid white;">
                                 ${conferme > 1 ? `<span style="transform: rotate(45deg); color: white; font-weight: 800; font-size: 10px;">${conferme}</span>` : '<span style="width: 8px; height: 8px; background: white; border-radius: 50%; transform: rotate(45deg);"></span>'}
@@ -614,7 +646,6 @@
             document.getElementById('duplicate-modal').style.display = 'none';
             document.getElementById('confirm-captcha-modal').style.display = 'flex';
             
-            // Renderizziamo il Turnstile in modo esplicito ora che il modale è visibile
             setTimeout(() => {
                 if (typeof turnstile !== 'undefined') {
                     if (modalTurnstileWidgetId !== null) {
@@ -649,7 +680,6 @@
             openConfirmCaptchaModal(docId);
         }
 
-        // Funzione per confermare direttamente da un pin esistente con captcha protetto
         async function confirmExistingReportWithCaptcha() {
             if (!activeTargetDocId) return;
 
@@ -683,20 +713,17 @@
             }
         }
 
-        // Risoluzione tramite codice con lettura puntuale del documento (ID = codice)
         async function resolveReportByCode() {
             const inputCode = document.getElementById('closure-code-input').value.trim().toUpperCase();
             if (!inputCode) { showToast("Inserisci un codice valido."); return; }
 
             try {
-                // Lettura diretta per ID consentita da 'allow get' nelle regole Firestore
                 const docSnap = await db.collection("segnalazioni_private").doc(inputCode).get();
                 if (!docSnap.exists) { showToast("Codice non valido."); return; }
 
                 const privateData = docSnap.data();
                 const reportId = privateData.reportId;
 
-                // Aggiornamento del documento pubblico
                 await db.collection("segnalazioni").doc(reportId).update({ stato: "chiusa" });
                 
                 showToast("Segnalazione risolta con successo!");
@@ -768,7 +795,6 @@
             }
         }
 
-        // Controllo di prossimità prima di aprire il form di nuova segnalazione
         async function checkProximityAndProceed() {
             const center = map.getCenter();
             lockedCoords = { lat: center.lat, lng: center.lng };
@@ -777,7 +803,7 @@
                 const snapshot = await db.collection("segnalazioni").where("stato", "==", "approvata").get();
                 let nearbyReport = null;
                 let minDistance = Infinity;
-                const SOGLIA_METRI = 30; // Raggio di tolleranza
+                const SOGLIA_METRI = 30;
 
                 snapshot.forEach((doc) => {
                     const data = doc.data();
@@ -815,6 +841,30 @@
             openPanel('report-panel');
         }
 
+        // Funzione helper per la compressione di singola foto via Canvas
+        function compressImage(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 800;
+                        const scaleSize = MAX_WIDTH / img.width;
+                        canvas.width = scaleSize < 1 ? MAX_WIDTH : img.width;
+                        canvas.height = scaleSize < 1 ? img.height * scaleSize : img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.65));
+                    };
+                    img.onerror = () => resolve("");
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => resolve("");
+                reader.readAsDataURL(file);
+            });
+        }
+
         async function submitReport() {
             const addressText = document.getElementById('address-input').value.trim();
             const userEmail = document.getElementById('email-input').value.trim();
@@ -822,7 +872,6 @@
             const description = document.getElementById('desc-input').value;
             const privacyChecked = document.getElementById('privacy-check').checked;
             
-            // Controllo token Turnstile Anti-Spam
             let turnstileResponse = "";
             if (typeof turnstile !== 'undefined' && formTurnstileWidgetId !== null) {
                 turnstileResponse = turnstile.getResponse(formTurnstileWidgetId);
@@ -839,31 +888,16 @@
             if (!privacyChecked) { showToast("Devi accettare l'informativa sulla privacy per procedere."); return; }
             if (!lockedCoords) { showToast("Errore di posizione. Riprova a selezionarla sulla mappa."); return; }
 
+            // Elaborazione fino a 3 immagini
             const imageInput = document.getElementById('image-input');
-            let imageDataUrl = "";
+            let imagesArray = [];
 
-            if (imageInput.files && imageInput.files[0]) {
-                const file = imageInput.files[0];
-                imageDataUrl = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const img = new Image();
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            const MAX_WIDTH = 800;
-                            const scaleSize = MAX_WIDTH / img.width;
-                            canvas.width = scaleSize < 1 ? MAX_WIDTH : img.width;
-                            canvas.height = scaleSize < 1 ? img.height * scaleSize : img.height;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            resolve(canvas.toDataURL('image/jpeg', 0.7));
-                        };
-                        img.onerror = () => resolve("");
-                        img.src = e.target.result;
-                    };
-                    reader.onerror = () => resolve("");
-                    reader.readAsDataURL(file);
-                });
+            if (imageInput.files && imageInput.files.length > 0) {
+                const filesToProcess = Array.from(imageInput.files).slice(0, 3);
+                for (const file of filesToProcess) {
+                    const base64Img = await compressImage(file);
+                    if (base64Img) imagesArray.push(base64Img);
+                }
             }
 
             const closureCode = generateCode();
@@ -881,27 +915,26 @@
 
                 await emailjs.send("service_00o5cml", "template_0sfzma5", templateParams);
 
-                // 2. Salvataggio dati PUBBLICI (Zero email, Zero codice)
+                // 2. Salvataggio dati PUBBLICI (Foto come Array)
                 const docRef = await db.collection("segnalazioni").add({
                     indirizzoManuale: addressText,
                     tipoRifiuto: tipoRifiuto,
                     lat: lockedCoords.lat,
                     lng: lockedCoords.lng,
                     descrizione: description,
-                    foto: imageDataUrl,
+                    foto: imagesArray,
                     stato: "in_attesa",
                     conferme: 1,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // 3. Salvataggio dati PRIVATI usabile per ID (usando closureCode come ID documento)
+                // 3. Salvataggio dati PRIVATI usabile per ID
                 await db.collection("segnalazioni_private").doc(closureCode).set({
                     reportId: docRef.id,
                     emailUtente: userEmail,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                // Segnamo in locale che l'autore ha già "confermatosi" la propria segnalazione
                 localStorage.setItem(`confirmed_${docRef.id}`, 'true');
 
                 lastReportData = {
