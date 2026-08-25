@@ -155,10 +155,11 @@
         </div>
     </div>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs (inclusi Firestore, Auth e Storage) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 
     <script>
         const firebaseConfig = {
@@ -173,6 +174,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const auth = firebase.auth();
+        const storage = firebase.storage(); // Inizializzazione Storage per la pulizia dei file
 
         function showToast(msg) {
             const t = document.getElementById('toast');
@@ -359,15 +361,36 @@
             }
         }
 
+        // Funzione di eliminazione avanzata: rimuove il record dal DB e pulisce le foto da Storage
         async function deleteReport(publicId, codeDocId) {
-            if (confirm("Sei sicuro di voler eliminare definitivamente questo documento da Firebase? L'azione è irreversibile.")) {
+            if (confirm("Sei sicuro di voler eliminare definitivamente questo documento e le relative foto dal cloud? L'azione è irreversibile.")) {
                 try {
-                    const promises = [db.collection("segnalazioni").doc(publicId).delete()];
+                    // 1. Recuperiamo il documento prima di eliminarlo per leggere i link delle foto
+                    const docRef = db.collection("segnalazioni").doc(publicId);
+                    const docSnap = await docRef.get();
+
+                    if (docSnap.exists) {
+                        const data = docSnap.data();
+                        // 2. Pulizia foto da Firebase Storage
+                        if (data.foto && Array.isArray(data.foto)) {
+                            for (let fotoUrl of data.foto) {
+                                try {
+                                    const imageRef = storage.refFromURL(fotoUrl);
+                                    await imageRef.delete();
+                                } catch (storageErr) {
+                                    console.warn("Impossibile trovare il file nello storage o già eliminato:", storageErr);
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. Eliminazione dei documenti da Firestore (pubblico e privato)
+                    const promises = [docRef.delete()];
                     if (codeDocId) {
                         promises.push(db.collection("segnalazioni_private").doc(codeDocId).delete().catch(() => {}));
                     }
                     await Promise.all(promises);
-                    showToast("Documento eliminato definitivamente dal database.");
+                    showToast("Documento e foto eliminati definitivamente dal cloud.");
                 } catch (e) {
                     showToast("Errore durante l'eliminazione: " + e.message);
                 }
