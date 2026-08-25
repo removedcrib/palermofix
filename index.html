@@ -120,7 +120,7 @@
         .brand-info h1 { font-size: 15px; font-weight: 800; color: var(--dark); margin: 0; letter-spacing: -0.3px; line-height: 1.1; }
         .brand-info span { font-size: 11px; color: #666; font-weight: 600; }
 
-        .top-actions { display: flex; gap: 8px; pointer-events: auto; }
+        .top-actions { display: flex; gap: 8px; pointer-events: auto; align-items: center; }
         .top-btn {
             background: var(--glass-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
             border: 1px solid var(--glass-border); width: 44px; height: 44px; border-radius: 50%;
@@ -129,21 +129,39 @@
         }
         .top-btn:hover { background: white; transform: translateY(-2px); }
 
-        /* Barra filtri staccata e ben posizionata (più in basso rispetto al top-bar) */
-        #filter-bar {
-            position: absolute; top: 84px; left: 20px; right: 20px; z-index: 950;
-            display: flex; gap: 8px; overflow-x: auto; padding: 4px 0;
-            pointer-events: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+        /* Filtro a "Esplosione" in alto a destra (The Dynamic Dropdown Pill) */
+        .filter-dropdown-container {
+            position: relative; pointer-events: auto;
         }
-        #filter-bar::-webkit-scrollbar { display: none; }
-        .filter-chip {
-            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border); padding: 8px 15px; border-radius: 25px;
-            font-size: 12px; font-weight: 700; color: var(--dark); white-space: nowrap; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.06); transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+        .filter-main-btn {
+            background: var(--glass-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--glass-border); height: 44px; padding: 0 16px; border-radius: 50px;
+            display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--dark);
+            font-size: 13px; font-weight: 700; box-shadow: 0 10px 25px rgba(0,0,0,0.08); transition: all 0.2s;
+            white-space: nowrap;
         }
-        .filter-chip:hover { background: white; transform: translateY(-1px); }
-        .filter-chip.active { background: var(--dark); color: white; border-color: var(--dark); }
+        .filter-main-btn:hover { background: white; transform: translateY(-2px); }
+        .filter-main-btn span.icon { font-size: 16px; }
+
+        .filter-menu-popup {
+            position: absolute; top: 54px; right: 0; width: 280px;
+            background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); border-radius: 20px; padding: 8px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15); display: none; flex-direction: column; gap: 4px;
+            z-index: 1050; animation: menuPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            transform-origin: top right;
+        }
+        @keyframes menuPop {
+            0% { opacity: 0; transform: scale(0.95) translateY(-8px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .filter-menu-item {
+            padding: 10px 14px; border-radius: 12px; font-size: 12px; font-weight: 700; color: var(--dark);
+            cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.15s;
+        }
+        .filter-menu-item:hover { background: rgba(255, 107, 53, 0.08); color: var(--primary); }
+        .filter-menu-item.active { background: var(--dark); color: white; }
+        .filter-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
         #welcome-modal { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; 
@@ -326,22 +344,29 @@
                 <span id="active-count-badge">Caricamento...</span>
             </div>
         </div>
+        
         <div class="top-actions">
+            <!-- Filtro a "Esplosione" in alto a destra -->
+            <div class="filter-dropdown-container">
+                <button class="filter-main-btn" onclick="toggleFilterMenu(event)">
+                    <span class="icon">🎛️</span>
+                    <span id="filter-btn-label">Tutti</span>
+                </button>
+                <div id="filter-menu" class="filter-menu-popup">
+                    <div class="filter-menu-item active" onclick="setFilter('Tutti', 'Tutti', this)"><div class="filter-dot" style="background: var(--primary);"></div>🌐 Tutti i rifiuti</div>
+                    <div class="filter-menu-item" onclick="setFilter('Micro-discarica / Sacchi abbandonati', 'Micro-discariche', this)"><div class="filter-dot" style="background: #e63946;"></div>🔴 Micro-discariche</div>
+                    <div class="filter-menu-item" onclick="setFilter('Cassonetti saturi o traboccanti', 'Cassonetti', this)"><div class="filter-dot" style="background: #ffb703;"></div>🟡 Cassonetti saturi</div>
+                    <div class="filter-menu-item" onclick="setFilter('Cestini gettacarte stradali saturi', 'Cestini', this)"><div class="filter-dot" style="background: #7209b7;"></div>🟣 Cestini saturi</div>
+                    <div class="filter-menu-item" onclick="setFilter('Mancato spazzamento / Marciapiedi sporchi', 'Spazzamento', this)"><div class="filter-dot" style="background: #4a4e69;"></div>🧹 Spazzamento</div>
+                    <div class="filter-menu-item" onclick="setFilter('Abbandono rifiuti ingombranti', 'Ingombranti', this)"><div class="filter-dot" style="background: #8d6e63;"></div>🛋️ Ingombranti</div>
+                    <div class="filter-menu-item" onclick="setFilter('Materiale edile e inerti', 'Inerti', this)"><div class="filter-dot" style="background: #d4a373;"></div>🧱 Inerti</div>
+                    <div class="filter-menu-item" onclick="setFilter('Sfalci di potatura e verde', 'Sfalci', this)"><div class="filter-dot" style="background: #2ec4b6;"></div>🍃 Sfalci di verde</div>
+                </div>
+            </div>
+
             <button class="top-btn" onclick="openPanel('legend-panel')" title="Legenda Mappa">🗺️</button>
             <button class="top-btn" onclick="openWelcomeModal()" title="Guida / Tutorial">ℹ️</button>
         </div>
-    </div>
-
-    <!-- Barra filtri orizzontale scorrevole (staccata e ariosa) -->
-    <div id="filter-bar">
-        <div class="filter-chip active" onclick="setFilter('Tutti', this)">🌐 Tutti</div>
-        <div class="filter-chip" onclick="setFilter('Micro-discarica / Sacchi abbandonati', this)">🔴 Micro-discariche</div>
-        <div class="filter-chip" onclick="setFilter('Cassonetti saturi o traboccanti', this)">🟡 Cassonetti</div>
-        <div class="filter-chip" onclick="setFilter('Cestini gettacarte stradali saturi', this)">🟣 Cestini</div>
-        <div class="filter-chip" onclick="setFilter('Mancato spazzamento / Marciapiedi sporchi', this)">🧹 Spazzamento</div>
-        <div class="filter-chip" onclick="setFilter('Abbandono rifiuti ingombranti', this)">🛋️ Ingombranti</div>
-        <div class="filter-chip" onclick="setFilter('Materiale edile e inerti', this)">🧱 Inerti</div>
-        <div class="filter-chip" onclick="setFilter('Sfalci di potatura e verde', this)">🍃 Sfalci</div>
     </div>
 
     <div id="welcome-modal">
@@ -410,7 +435,7 @@
         <div id="overlay-counter" class="overlay-counter">1 / 1</div>
     </div>
 
-    <!-- Modale di successo con codice e opzione mail RAP (senza WhatsApp qui dentro) -->
+    <!-- Modale di successo con codice e opzione mail RAP -->
     <div id="code-modal">
         <div class="modal-content">
             <h3>Segnalazione Inviata! 🚀</h3>
@@ -585,7 +610,21 @@
                     }).catch(e => console.log(e));
                 }, 1500);
             }
+
+            // Chiusura del menu a tendina se si clicca fuori
+            window.addEventListener('click', (e) => {
+                const container = document.querySelector('.filter-dropdown-container');
+                if (container && !container.contains(e.target)) {
+                    document.getElementById('filter-menu').style.display = 'none';
+                }
+            });
         });
+
+        function toggleFilterMenu(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('filter-menu');
+            menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
+        }
 
         function openWelcomeModal() {
             currentWelcomeStep = 1;
@@ -614,7 +653,7 @@
         }
 
         const firebaseConfig = {
-            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnv3E",
+            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnV3E",
             authDomain: "palermofix-9cae9.firebaseapp.com",
             projectId: "palermofix-9cae9",
             storageBucket: "palermofix-9cae9.firebasestorage.app",
@@ -728,10 +767,14 @@
             });
         }
 
-        function setFilter(filterType, element) {
+        function setFilter(filterType, labelText, element) {
             currentActiveFilter = filterType;
-            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            document.getElementById('filter-btn-label').innerText = labelText;
+            document.getElementById('filter-menu').style.display = 'none';
+
+            document.querySelectorAll('.filter-menu-item').forEach(i => i.classList.remove('active'));
             element.classList.add('active');
+
             renderFilteredMarkers();
         }
 
