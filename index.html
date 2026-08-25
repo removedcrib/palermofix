@@ -849,13 +849,13 @@
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800;
+                        const MAX_WIDTH = 600; // Ridotto per massima velocità e leggerezza
                         const scaleSize = MAX_WIDTH / img.width;
                         canvas.width = scaleSize < 1 ? MAX_WIDTH : img.width;
                         canvas.height = scaleSize < 1 ? img.height * scaleSize : img.height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.65));
+                        resolve(canvas.toDataURL('image/jpeg', 0.5)); // Qualità bilanciata al 50%
                     };
                     img.onerror = () => resolve("");
                     img.src = e.target.result;
@@ -903,7 +903,7 @@
             const closureCode = generateCode();
 
             try {
-                // 1. Invio email tramite EmailJS
+                // 1. Invio email tramite EmailJS (SOLO TESTO, SENZA FOTO PER NON SUPERARE IL LIMITE EMAILJS)
                 const templateParams = {
                     to_email: userEmail,
                     user_email: userEmail,
@@ -915,7 +915,7 @@
 
                 await emailjs.send("service_00o5cml", "template_0sfzma5", templateParams);
 
-                // 2. Salvataggio dati PUBBLICI (Foto come Array)
+                // 2. Salvataggio dati PUBBLICI (Le foto risiedono esclusivamente su Firebase)
                 const docRef = await db.collection("segnalazioni").add({
                     indirizzoManuale: addressText,
                     tipoRifiuto: tipoRifiuto,
