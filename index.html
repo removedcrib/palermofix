@@ -826,7 +826,6 @@
                         photoHtml += `</div>`;
                     }
 
-                    // Link WhatsApp specifico che punta direttamente a questa segnalazione
                     const cleanBaseUrl = window.location.origin + window.location.pathname;
                     const specificReportUrl = `${cleanBaseUrl}?id=${data.id}`;
                     const encodedWaMsg = encodeURIComponent(`Segnalazione Palermo Fix 🚮\nTipo: ${data.tipoRifiuto}\nIndirizzo: ${data.indirizzoManuale}\nGuarda la mappa o conferma il problema: ${specificReportUrl}`);
@@ -919,13 +918,14 @@
             }
         }
 
+        // Funzione di chiusura protetta e blindata
         async function resolveReportByCode() {
             const inputCode = document.getElementById('closure-code-input').value.trim().toUpperCase();
             if (!inputCode) { showToast("Inserisci un codice valido."); return; }
 
             try {
                 const docSnap = await db.collection("segnalazioni_private").doc(inputCode).get();
-                if (!docSnap.exists) { showToast("Codice non valido."); return; }
+                if (!docSnap.exists) { showToast("Codice non valido o già utilizzato."); return; }
                 const privateData = docSnap.data();
                 const reportId = privateData.reportId;
 
@@ -940,7 +940,7 @@
                                 const imageRef = storage.refFromURL(fotoUrl);
                                 await imageRef.delete();
                             } catch (storageErr) {
-                                console.warn("Immagine già rimossa o non trovata:", storageErr);
+                                console.warn("Immagine non trovata nel cloud, procediamo comunque:", storageErr);
                             }
                         }
                     }
