@@ -525,7 +525,7 @@
         <div class="form-group" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 6px; text-align: left;">
             <input type="checkbox" id="privacy-check" style="width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primary); cursor: pointer;" required>
             <label for="privacy-check" style="font-size: 11px; color: #555; line-height: 1.4; cursor: pointer;">
-                Dichiaro di aver preso visione dell'<a href="#" onclick="openPrivacyModal(event)" style="color: var(--primary); font-weight: 700; text-decoration: underline;">Informativa sulla Privacy</a> e autorizzo il trattamento dei dati.
+                Dichiaro di aver preso visione dell'<a href="#" onclick="openPrivacyFromReport(event)" style="color: var(--primary); font-weight: 700; text-decoration: underline;">Informativa sulla Privacy</a> e autorizzo il trattamento dei dati.
             </label>
         </div>
 
@@ -579,6 +579,7 @@
         let lastReportData = null;
         let pendingNearbyReport = null;
         let activeTargetDocId = null;
+        let returningToReport = false; // Flag per gestire il ritorno al modulo report dalla privacy
 
         let modalTurnstileWidgetId = null;
         let formTurnstileWidgetId = null;
@@ -808,7 +809,6 @@
                     let photoHtml = "";
                     let photoList = [];
                     if (Array.isArray(data.foto) && data.foto.length > 0) {
-                        // Estraiamo l'URL sia che i dati siano oggetti strutturati che vecchie stringhe
                         photoList = data.foto.map(f => (typeof f === 'object' && f !== null ? f.url : f));
                     } else if (typeof data.foto === "string" && data.foto.length > 20) {
                         photoList = [data.foto];
@@ -980,12 +980,26 @@
         
         function closePanel(panelId) { 
             document.getElementById(panelId).classList.remove('active'); 
+            
+            // Se chiudiamo la privacy e provenivamo dal form di segnalazione, riapriamo il report-panel
+            if (panelId === 'privacy-modal' && returningToReport) {
+                returningToReport = false;
+                setTimeout(() => {
+                    openPanel('report-panel');
+                }, 200);
+                return;
+            }
+
             if (panelId === 'report-panel' && typeof turnstile !== 'undefined' && formTurnstileWidgetId !== null) {
                 turnstile.remove(formTurnstileWidgetId); formTurnstileWidgetId = null;
             }
         }
 
-        function openPrivacyModal(e) { e.preventDefault(); openPanel('privacy-modal'); }
+        function openPrivacyFromReport(e) {
+            e.preventDefault();
+            returningToReport = true; // Segnamo che siamo partiti dal form di segnalazione
+            openPanel('privacy-modal');
+        }
 
         function startPinSelection() {
             document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
