@@ -181,9 +181,9 @@
         .step-dot.active { background: var(--primary); width: 24px; border-radius: 4px; }
         .welcome-actions { display: flex; flex-direction: column; gap: 10px; }
 
-        /* Pulsante GPS fluttuante in basso a destra */
+        /* Pulsante GPS fluttuante in basso a sinistra (libero da sovrapposizioni) */
         #gps-fab {
-            position: absolute; bottom: 135px; right: 20px; z-index: 1000;
+            position: absolute; bottom: 135px; left: 20px; z-index: 1000;
             background: var(--glass-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
             border: 1px solid var(--glass-border); width: 48px; height: 48px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--dark);
@@ -459,7 +459,7 @@
         </div>
     </div>
 
-    <!-- Pulsante rapido di geolocalizzazione in basso a destra -->
+    <!-- Pulsante rapido di geolocalizzazione spostato a sinistra -->
     <button id="gps-fab" onclick="panToUserLocation()" title="Centra sulla mia posizione">📍</button>
 
     <div id="ui-overlay">
