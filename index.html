@@ -129,18 +129,18 @@
         }
         .top-btn:hover { background: white; transform: translateY(-2px); }
 
-        /* Barra filtri a scorrimento orizzontale (Fighissima) */
+        /* Barra filtri staccata e ben posizionata (più in basso rispetto al top-bar) */
         #filter-bar {
-            position: absolute; top: 80px; left: 20px; right: 20px; z-index: 950;
-            display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+            position: absolute; top: 84px; left: 20px; right: 20px; z-index: 950;
+            display: flex; gap: 8px; overflow-x: auto; padding: 4px 0;
             pointer-events: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
         }
         #filter-bar::-webkit-scrollbar { display: none; }
         .filter-chip {
             background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border); padding: 7px 14px; border-radius: 25px;
+            border: 1px solid var(--glass-border); padding: 8px 15px; border-radius: 25px;
             font-size: 12px; font-weight: 700; color: var(--dark); white-space: nowrap; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06); transition: all 0.2s; display: flex; align-items: center; gap: 6px;
         }
         .filter-chip:hover { background: white; transform: translateY(-1px); }
         .filter-chip.active { background: var(--dark); color: white; border-color: var(--dark); }
@@ -332,7 +332,7 @@
         </div>
     </div>
 
-    <!-- Barra filtri orizzontale scorrevole -->
+    <!-- Barra filtri orizzontale scorrevole (staccata e ariosa) -->
     <div id="filter-bar">
         <div class="filter-chip active" onclick="setFilter('Tutti', this)">🌐 Tutti</div>
         <div class="filter-chip" onclick="setFilter('Micro-discarica / Sacchi abbandonati', this)">🔴 Micro-discariche</div>
@@ -410,15 +410,14 @@
         <div id="overlay-counter" class="overlay-counter">1 / 1</div>
     </div>
 
-    <!-- Modale di successo con codice, opzione mail RAP e WhatsApp -->
+    <!-- Modale di successo con codice e opzione mail RAP (senza WhatsApp qui dentro) -->
     <div id="code-modal">
         <div class="modal-content">
             <h3>Segnalazione Inviata! 🚀</h3>
             <p style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 5px;">Ti abbiamo inviato un'email con il codice di chiusura. Ecco il codice di riserva:</p>
             <div class="code-box" id="display-closure-code">------</div>
             
-            <button class="btn-main btn-alt" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 8px; font-size: 13px;" onclick="openRapMail()">✉️ Invia segnalazione a RAP (URP)</button>
-            <button class="btn-main btn-whatsapp" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 10px; font-size: 13px;" onclick="shareOnWhatsApp()">💬 Condividi su WhatsApp</button>
+            <button class="btn-main btn-alt" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 12px; font-size: 13px;" onclick="openRapMail()">✉️ Invia segnalazione a RAP (URP)</button>
             
             <button class="btn-main" style="width: 100%; max-width: none; padding: 14px;" onclick="closeCodeModal()">Ho salvato il codice</button>
         </div>
@@ -563,12 +562,28 @@
         let currentZoomPhotos = [];
         let currentZoomIndex = 0;
 
-        let rawReportsCache = []; // Cache per i filtri istantanei
+        let rawReportsCache = [];
         let currentActiveFilter = 'Tutti';
 
         window.addEventListener('DOMContentLoaded', () => {
             if (!localStorage.getItem('palermoFix_intro_visto')) {
                 openWelcomeModal();
+            }
+            
+            // Gestione Deep Linking: se l'utente apre un link con ?id=XYZ, apriamo quel pin in automatico
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetId = urlParams.get('id');
+            if (targetId) {
+                setTimeout(() => {
+                    db.collection("segnalazioni").doc(targetId).get().then(doc => {
+                        if (doc.exists) {
+                            const data = doc.data();
+                            if (data.lat && data.lng) {
+                                map.setView([data.lat, data.lng], 18);
+                            }
+                        }
+                    }).catch(e => console.log(e));
+                }, 1500);
             }
         });
 
@@ -599,7 +614,7 @@
         }
 
         const firebaseConfig = {
-            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnV3E",
+            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnv3E",
             authDomain: "palermofix-9cae9.firebaseapp.com",
             projectId: "palermofix-9cae9",
             storageBucket: "palermofix-9cae9.firebasestorage.app",
@@ -727,7 +742,7 @@
 
             rawReportsCache.forEach((data) => {
                 if (currentActiveFilter !== 'Tutti' && data.tipoRifiuto !== currentActiveFilter) {
-                    return; // Salta i marker che non corrispondono al filtro
+                    return; 
                 }
 
                 if (data.lat && data.lng) {
@@ -768,8 +783,10 @@
                         photoHtml += `</div>`;
                     }
 
-                    // Pulsante WhatsApp all'interno del Popup della Mappa
-                    const encodedWaMsg = encodeURIComponent(`Segnalazione Palermo Fix 🚮\nTipo: ${data.tipoRifiuto}\nIndirizzo: ${data.indirizzoManuale}\nGuarda la mappa o conferma il problema: ${window.location.origin}${window.location.pathname}`);
+                    // Link WhatsApp specifico che punta direttamente a questa segnalazione
+                    const cleanBaseUrl = window.location.origin + window.location.pathname;
+                    const specificReportUrl = `${cleanBaseUrl}?id=${data.id}`;
+                    const encodedWaMsg = encodeURIComponent(`Segnalazione Palermo Fix 🚮\nTipo: ${data.tipoRifiuto}\nIndirizzo: ${data.indirizzoManuale}\nGuarda la mappa o conferma il problema: ${specificReportUrl}`);
 
                     const content = `
                         <div class="custom-popup" style="text-align: left;">
@@ -1120,12 +1137,6 @@
             const googleMapsUrl = `https://www.google.com/maps?q=${lastReportData.lat},${lastReportData.lng}`;
             const corpo = encodeURIComponent(`Salve,\n\nSegnalo la presenza della seguente criticità ambientale sul territorio comunale:\n\n- Tipologia: ${lastReportData.tipo}\n- Indirizzo / Riferimento: ${lastReportData.indirizzo}\n- Descrizione: ${lastReportData.descrizione || 'Nessuna descrizione aggiuntiva'}\n\nPotete verificare la posizione esatta al seguente link:\n${googleMapsUrl}\n\nCordiali saluti.`);
             window.location.href = `mailto:${emailDestinatario}?subject=${oggetto}&body=${corpo}`;
-        }
-
-        function shareOnWhatsApp() {
-            if (!lastReportData) return;
-            const waText = encodeURIComponent(`Ho appena segnalato un problema su Palermo Fix 🚮\n\n- Tipo: ${lastReportData.tipo}\n- Indirizzo: ${lastReportData.indirizzo}\n\nAiutaci a mantenere pulita la città, guarda la mappa o conferma il problema: ${window.location.origin}${window.location.pathname}`);
-            window.open(`https://api.whatsapp.com/send?text=${waText}`, '_blank');
         }
     </script>
 </body>
