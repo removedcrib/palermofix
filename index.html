@@ -17,19 +17,20 @@
     <meta property="og:description" content="Mappa in tempo reale le criticità ambientali della tua zona e contribuisci a mantenere pulita Palermo.">
     <meta property="og:image" content="https://raw.githubusercontent.com/removedcrib/palermofix/2bb680b52e81d02aeda5a1ec6ee6de2a1a5e924c/og-image.svg">
 
-    <!-- Twitter Cards -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Palermo Fix | Mappa Civica Segnalazione Rifiuti">
-    <meta name="twitter:description" content="Segnala i rifiuti abbandonati a Palermo e traccia le criticità sulla mappa.">
-    <meta name="twitter:image" content="https://raw.githubusercontent.com/removedcrib/palermofix/2bb680b52e81d02aeda5a1ec6ee6de2a1a5e924c/og-image.svg">
-
     <!-- Favicon rapida via Emoji -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚮</text></svg>">
     <meta name="theme-color" content="#1d3557">
 
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Script Cloudflare Turnstile (render explicit) -->
+    
+    <!-- MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+
+    <!-- Script Cloudflare Turnstile -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+    
     <!-- Script EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script type="text/javascript">
@@ -54,6 +55,21 @@
         body, html { margin: 0; padding: 0; height: 100%; height: 100dvh; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; background-color: #f0f4f8; }
         #map { height: 100%; height: 100dvh; width: 100vw; z-index: 1; }
 
+        /* Stile Custom Cluster Marker */
+        .marker-cluster-custom {
+            background: rgba(255, 107, 53, 0.2);
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .marker-cluster-custom div {
+            width: 30px; height: 30px; border-radius: 50%;
+            background: var(--primary-gradient);
+            color: white; font-weight: 800; font-size: 13px;
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 4px 10px rgba(255, 107, 53, 0.4);
+            border: 2px solid white;
+        }
+
         /* Pin fisso al centro dello schermo in modalità posizionamento */
         #center-pin {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%);
@@ -71,9 +87,7 @@
             text-align: center; box-sizing: border-box;
         }
         
-        .banner-top-row {
-            display: flex; align-items: center; justify-content: space-between; gap: 10px;
-        }
+        .banner-top-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
         #pin-picker-banner p { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.4; text-align: left; flex: 1; }
         
         .banner-close {
@@ -455,7 +469,7 @@
             </label>
         </div>
 
-        <button class="btn-main" onclick="submitReport()" style="width:100%; max-width:none; margin-top: 4px;">Invia Segnalazione</button>
+        <button class="btn-main" onclick="submitReport()" id="btn-invia-report" style="width:100%; max-width:none; margin-top: 4px;">Invia Segnalazione</button>
     </div>
 
     <!-- Modale Informativa Privacy Aggiornata -->
@@ -494,21 +508,23 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <!-- Aggiunto Firebase Storage per l'architettura enterprise -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 
     <script>
         let currentWelcomeStep = 1;
         let lockedCoords = null;
         let lastReportData = null;
-        let pendingNearbyReport = null; // Memorizza il doppione trovato per la conferma
+        let pendingNearbyReport = null;
         let activeTargetDocId = null;
 
         let modalTurnstileWidgetId = null;
         let formTurnstileWidgetId = null;
         const SITE_KEY = "0x4AAAAAAEYWAjVXMfRAMSI0";
 
-        // Variabili per la galleria fotografica a schermo intero
         let currentZoomPhotos = [];
         let currentZoomIndex = 0;
 
@@ -555,12 +571,25 @@
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const storage = firebase.storage(); // Inizializzazione Storage
 
         var map = L.map('map', { zoomControl: false }).setView([38.1157, 13.3615], 14);
         L.control.zoom({ position: 'topright' }).addTo(map);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
-        let markersLayer = L.layerGroup().addTo(map);
+        // Inizializzazione del Cluster Group di Leaflet per gestire enormi volumi di segnalazioni
+        let markersCluster = L.markerClusterGroup({
+            maxClusterRadius: 40,
+            iconCreateFunction: function (cluster) {
+                var childCount = cluster.getChildCount();
+                return new L.DivIcon({ 
+                    html: '<div><span>' + childCount + '</span></div>', 
+                    className: 'marker-cluster-custom', 
+                    iconSize: new L.Point(40, 40) 
+                });
+            }
+        });
+        map.addLayer(markersCluster);
 
         function showToast(msg) {
             const t = document.getElementById('toast');
@@ -569,7 +598,6 @@
             setTimeout(() => { t.classList.remove('show'); }, 3000);
         }
 
-        // Funzioni per la gestione dello zoom e navigazione tra foto
         function zoomImage(photoArray, index) {
             if (typeof photoArray === 'string') {
                 currentZoomPhotos = [photoArray];
@@ -622,26 +650,29 @@
         function closeCodeModal() { document.getElementById('code-modal').style.display = 'none'; }
         function generateCode() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
 
-        // Formula Haversine per calcolare la distanza in metri tra coordinate
         function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
             const R = 6371e3;
             const dLat = (lat2 - lat1) * (Math.PI / 180);
             const dLon = (lon2 - lon1) * (Math.PI / 180);
-            const a = 
-                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
-                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c;
         }
 
         function loadMarkers() {
-            markersLayer.clearLayers();
-            db.collection("segnalazioni").get().then((querySnapshot) => {
+            markersCluster.clearLayers();
+            // Implementazione protezione limit(1500) per scalare a milioni senza impattare i costi di Firebase
+            db.collection("segnalazioni")
+              .where("stato", "==", "approvata")
+              .limit(1500)
+              .get()
+              .then((querySnapshot) => {
                 let activeCount = 0;
+                let markersArray = [];
+                
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    if ((data.stato || "in_attesa") === "approvata" && data.lat && data.lng) {
+                    if (data.lat && data.lng) {
                         activeCount++;
                         const conferme = data.conferme || 1;
                         let pinColor = "#ff6b35"; 
@@ -656,10 +687,8 @@
                         }
 
                         if (conferme >= 5) pinColor = "#900C3F";
-
                         const alreadyConfirmed = localStorage.getItem(`confirmed_${doc.id}`) === 'true';
 
-                        // Gestione delle immagini (singola o array fino a 3)
                         let photoHtml = "";
                         let photoList = [];
                         if (Array.isArray(data.foto) && data.foto.length > 0) {
@@ -674,7 +703,7 @@
                             photoList.forEach((src, idx) => {
                                 photoHtml += `
                                     <div class="photo-carousel-item">
-                                        <img src="${src}" onclick="zoomImage(${jsonPhotos}, ${idx})" title="Clicca per ingrandire">
+                                        <img src="${src}" onclick="zoomImage(${jsonPhotos}, ${idx})" title="Clicca per ingrandire" loading="lazy">
                                         ${photoList.length > 1 ? `<span class="photo-badge">${idx + 1}/${photoList.length}</span>` : ''}
                                     </div>`;
                             });
@@ -703,43 +732,32 @@
                             </div>
                         `;
 
-                        const customIcon = L.divIcon({
-                            className: 'custom-pin-marker',
-                            html: iconHtml,
-                            iconSize: [28, 28],
-                            iconAnchor: [14, 28]
-                        });
-
-                        L.marker([data.lat, data.lng], { icon: customIcon }).addTo(markersLayer).bindPopup(content);
+                        const customIcon = L.divIcon({ className: 'custom-pin-marker', html: iconHtml, iconSize: [28, 28], iconAnchor: [14, 28] });
+                        
+                        const marker = L.marker([data.lat, data.lng], { icon: customIcon }).bindPopup(content);
+                        markersArray.push(marker);
                     }
                 });
-                document.getElementById('active-count-badge').innerText = activeCount + (activeCount === 1 ? ' attiva in zona' : ' attive in zona');
+                
+                markersCluster.addLayers(markersArray); // Aggiunge tutti i pin nel sistema cluster
+                document.getElementById('active-count-badge').innerText = activeCount + (activeCount === 1 ? ' attiva' : ' attive');
             }).catch((error) => {
                 console.error("Errore nel caricamento: ", error);
-                document.getElementById('active-count-badge').innerText = 'Errore caricamento';
+                document.getElementById('active-count-badge').innerText = 'Errore';
             });
         }
 
         loadMarkers();
 
         function openConfirmCaptchaModal(docId) {
-            if (localStorage.getItem(`confirmed_${docId}`) === 'true') {
-                showToast("Hai già confermato questa segnalazione.");
-                return;
-            }
+            if (localStorage.getItem(`confirmed_${docId}`) === 'true') { showToast("Hai già confermato questa segnalazione."); return; }
             activeTargetDocId = docId;
             document.getElementById('duplicate-modal').style.display = 'none';
             document.getElementById('confirm-captcha-modal').style.display = 'flex';
-            
             setTimeout(() => {
                 if (typeof turnstile !== 'undefined') {
-                    if (modalTurnstileWidgetId !== null) {
-                        turnstile.remove(modalTurnstileWidgetId);
-                    }
-                    modalTurnstileWidgetId = turnstile.render('#modal-turnstile-container', {
-                        sitekey: SITE_KEY,
-                        theme: 'light'
-                    });
+                    if (modalTurnstileWidgetId !== null) turnstile.remove(modalTurnstileWidgetId);
+                    modalTurnstileWidgetId = turnstile.render('#modal-turnstile-container', { sitekey: SITE_KEY, theme: 'light' });
                 }
             }, 100);
         }
@@ -747,16 +765,10 @@
         function closeConfirmCaptchaModal() {
             document.getElementById('confirm-captcha-modal').style.display = 'none';
             activeTargetDocId = null;
-            if (typeof turnstile !== 'undefined' && modalTurnstileWidgetId !== null) {
-                turnstile.remove(modalTurnstileWidgetId);
-                modalTurnstileWidgetId = null;
-            }
+            if (typeof turnstile !== 'undefined' && modalTurnstileWidgetId !== null) { turnstile.remove(modalTurnstileWidgetId); modalTurnstileWidgetId = null; }
         }
 
-        function closeDuplicateModal() {
-            document.getElementById('duplicate-modal').style.display = 'none';
-            pendingNearbyReport = null;
-        }
+        function closeDuplicateModal() { document.getElementById('duplicate-modal').style.display = 'none'; pendingNearbyReport = null; }
 
         function openConfirmCaptchaModalFromDuplicate() {
             if (!pendingNearbyReport) return;
@@ -767,24 +779,16 @@
 
         async function confirmExistingReportWithCaptcha() {
             if (!activeTargetDocId) return;
-
             let turnstileResponse = "";
-            if (typeof turnstile !== 'undefined' && modalTurnstileWidgetId !== null) {
-                turnstileResponse = turnstile.getResponse(modalTurnstileWidgetId);
-            }
-
-            if (!turnstileResponse) {
-                showToast("Completa la verifica anti-spam prima di confermare.");
-                return;
-            }
+            if (typeof turnstile !== 'undefined' && modalTurnstileWidgetId !== null) { turnstileResponse = turnstile.getResponse(modalTurnstileWidgetId); }
+            if (!turnstileResponse) { showToast("Completa la verifica anti-spam prima di confermare."); return; }
 
             try {
                 const docRef = db.collection("segnalazioni").doc(activeTargetDocId);
                 await db.runTransaction(async (transaction) => {
                     const doc = await transaction.get(docRef);
                     if (!doc.exists) throw "Segnalazione non esistente!";
-                    const newConferme = (doc.data().conferme || 1) + 1;
-                    transaction.update(docRef, { conferme: newConferme });
+                    transaction.update(docRef, { conferme: (doc.data().conferme || 1) + 1 });
                 });
 
                 localStorage.setItem(`confirmed_${activeTargetDocId}`, 'true');
@@ -805,10 +809,7 @@
             try {
                 const docSnap = await db.collection("segnalazioni_private").doc(inputCode).get();
                 if (!docSnap.exists) { showToast("Codice non valido."); return; }
-
-                const privateData = docSnap.data();
-                const reportId = privateData.reportId;
-
+                const reportId = docSnap.data().reportId;
                 await db.collection("segnalazioni").doc(reportId).update({ stato: "chiusa" });
                 
                 showToast("Segnalazione risolta con successo!");
@@ -828,13 +829,8 @@
             if (panelId === 'report-panel') {
                 setTimeout(() => {
                     if (typeof turnstile !== 'undefined') {
-                        if (formTurnstileWidgetId !== null) {
-                            turnstile.remove(formTurnstileWidgetId);
-                        }
-                        formTurnstileWidgetId = turnstile.render('#form-turnstile-container', {
-                            sitekey: SITE_KEY,
-                            theme: 'light'
-                        });
+                        if (formTurnstileWidgetId !== null) turnstile.remove(formTurnstileWidgetId);
+                        formTurnstileWidgetId = turnstile.render('#form-turnstile-container', { sitekey: SITE_KEY, theme: 'light' });
                     }
                 }, 100);
             }
@@ -843,15 +839,11 @@
         function closePanel(panelId) { 
             document.getElementById(panelId).classList.remove('active'); 
             if (panelId === 'report-panel' && typeof turnstile !== 'undefined' && formTurnstileWidgetId !== null) {
-                turnstile.remove(formTurnstileWidgetId);
-                formTurnstileWidgetId = null;
+                turnstile.remove(formTurnstileWidgetId); formTurnstileWidgetId = null;
             }
         }
 
-        function openPrivacyModal(e) {
-            e.preventDefault();
-            openPanel('privacy-modal');
-        }
+        function openPrivacyModal(e) { e.preventDefault(); openPanel('privacy-modal'); }
 
         function startPinSelection() {
             document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('active'));
@@ -869,15 +861,10 @@
         function useGPSForCenter() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    pos => {
-                        map.setView([pos.coords.latitude, pos.coords.longitude], 18);
-                        showToast("Mappa centrata sulla tua posizione GPS!");
-                    },
+                    pos => { map.setView([pos.coords.latitude, pos.coords.longitude], 18); showToast("Mappa centrata sulla tua posizione GPS!"); },
                     err => showToast("Impossibile recuperare il GPS.")
                 );
-            } else {
-                showToast("Geolocalizzazione non supportata.");
-            }
+            } else { showToast("Geolocalizzazione non supportata."); }
         }
 
         async function checkProximityAndProceed() {
@@ -894,10 +881,7 @@
                     const data = doc.data();
                     if (data.lat && data.lng) {
                         const dist = getDistanceFromLatLonInMeters(lockedCoords.lat, lockedCoords.lng, data.lat, data.lng);
-                        if (dist <= SOGLIA_METRI && dist < minDistance) {
-                            minDistance = dist;
-                            nearbyReport = { id: doc.id, ...data };
-                        }
+                        if (dist <= SOGLIA_METRI && dist < minDistance) { minDistance = dist; nearbyReport = { id: doc.id, ...data }; }
                     }
                 });
 
@@ -926,7 +910,6 @@
             openPanel('report-panel');
         }
 
-        // Funzione helper per la compressione di singola foto via Canvas
         function compressImage(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -934,13 +917,13 @@
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 600; // Ridotto per massima velocità e leggerezza
+                        const MAX_WIDTH = 800; // Aumentato un po' la qualità per Firebase Storage
                         const scaleSize = MAX_WIDTH / img.width;
                         canvas.width = scaleSize < 1 ? MAX_WIDTH : img.width;
                         canvas.height = scaleSize < 1 ? img.height * scaleSize : img.height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.5)); // Qualità bilanciata al 50%
+                        resolve(canvas.toDataURL('image/jpeg', 0.6));
                     };
                     img.onerror = () => resolve("");
                     img.src = e.target.result;
@@ -950,70 +933,85 @@
             });
         }
 
+        // Helper per convertire Base64 in Blob per l'upload su Firebase Storage
+        function dataURLToBlob(dataURL) {
+            const parts = dataURL.split(';base64,');
+            const contentType = parts[0].split(':')[1];
+            const raw = window.atob(parts[1]);
+            const rawLength = raw.length;
+            const uInt8Array = new Uint8Array(rawLength);
+            for (let i = 0; i < rawLength; ++i) {
+                uInt8Array[i] = raw.charCodeAt(i);
+            }
+            return new Blob([uInt8Array], { type: contentType });
+        }
+
         async function submitReport() {
             const addressText = document.getElementById('address-input').value.trim();
             const userEmail = document.getElementById('email-input').value.trim();
             const tipoRifiuto = document.getElementById('tipo-rifiuto-input').value;
             const description = document.getElementById('desc-input').value;
             const privacyChecked = document.getElementById('privacy-check').checked;
+            const btnInvia = document.getElementById('btn-invia-report');
             
             let turnstileResponse = "";
-            if (typeof turnstile !== 'undefined' && formTurnstileWidgetId !== null) {
-                turnstileResponse = turnstile.getResponse(formTurnstileWidgetId);
-            }
+            if (typeof turnstile !== 'undefined' && formTurnstileWidgetId !== null) { turnstileResponse = turnstile.getResponse(formTurnstileWidgetId); }
 
-            if (!turnstileResponse) {
-                showToast("Completa la verifica anti-spam prima di inviare.");
-                return;
-            }
-
-            if (!addressText) { showToast("Inserisci l'indirizzo e il numero civico per la RAP!"); return; }
+            if (!turnstileResponse) { showToast("Completa la verifica anti-spam prima di inviare."); return; }
+            if (!addressText) { showToast("Inserisci l'indirizzo per la RAP!"); return; }
             if (!userEmail || !userEmail.includes('@')) { showToast("Inserisci un'email valida per ricevere il codice!"); return; }
             if (!tipoRifiuto) { showToast("Seleziona la tipologia di rifiuto!"); return; }
-            if (!privacyChecked) { showToast("Devi accettare l'informativa sulla privacy per procedere."); return; }
-            if (!lockedCoords) { showToast("Errore di posizione. Riprova a selezionarla sulla mappa."); return; }
+            if (!privacyChecked) { showToast("Devi accettare l'informativa sulla privacy."); return; }
+            if (!lockedCoords) { showToast("Errore di posizione. Riprova a selezionarla."); return; }
 
-            // Elaborazione fino a 3 immagini
-            const imageInput = document.getElementById('image-input');
-            let imagesArray = [];
-
-            if (imageInput.files && imageInput.files.length > 0) {
-                const filesToProcess = Array.from(imageInput.files).slice(0, 3);
-                for (const file of filesToProcess) {
-                    const base64Img = await compressImage(file);
-                    if (base64Img) imagesArray.push(base64Img);
-                }
-            }
+            btnInvia.innerText = "Caricamento in corso...";
+            btnInvia.disabled = true;
 
             const closureCode = generateCode();
-
+            
             try {
-                // 1. Invio email tramite EmailJS (SOLO TESTO, SENZA FOTO PER NON SUPERARE IL LIMITE EMAILJS)
-                const templateParams = {
-                    to_email: userEmail,
-                    user_email: userEmail,
-                    codice_chiusura: closureCode,
-                    tipo_rifiuto: tipoRifiuto,
-                    indirizzo: addressText,
-                    descrizione: description || 'Nessuna descrizione'
-                };
+                // 1. Creiamo subito il riferimento al documento per avere l'ID ufficiale per lo Storage
+                const docRef = db.collection("segnalazioni").doc();
 
-                await emailjs.send("service_00o5cml", "template_0sfzma5", templateParams);
+                // 2. Upload Immagini su Firebase Storage (Enterprise Level)
+                const imageInput = document.getElementById('image-input');
+                let uploadedImageUrls = [];
 
-                // 2. Salvataggio dati PUBBLICI (Le foto risiedono esclusivamente su Firebase)
-                const docRef = await db.collection("segnalazioni").add({
+                if (imageInput.files && imageInput.files.length > 0) {
+                    const filesToProcess = Array.from(imageInput.files).slice(0, 3);
+                    for (let i = 0; i < filesToProcess.length; i++) {
+                        const base64Img = await compressImage(filesToProcess[i]);
+                        if (base64Img) {
+                            const blob = dataURLToBlob(base64Img);
+                            // Percorso in Storage: foto_segnalazioni/{id_report}/foto_{indice}.jpg
+                            const fileRef = storage.ref(`foto_segnalazioni/${docRef.id}/foto_${i}.jpg`);
+                            await fileRef.put(blob);
+                            const downloadUrl = await fileRef.getDownloadURL();
+                            uploadedImageUrls.push(downloadUrl);
+                        }
+                    }
+                }
+
+                // 3. Invio email via EmailJS (Solo Testo)
+                await emailjs.send("service_00o5cml", "template_0sfzma5", {
+                    to_email: userEmail, user_email: userEmail, codice_chiusura: closureCode,
+                    tipo_rifiuto: tipoRifiuto, indirizzo: addressText, descrizione: description || 'Nessuna descrizione'
+                });
+
+                // 4. Salvataggio su Firestore con le sole URL leggere
+                await docRef.set({
                     indirizzoManuale: addressText,
                     tipoRifiuto: tipoRifiuto,
                     lat: lockedCoords.lat,
                     lng: lockedCoords.lng,
                     descrizione: description,
-                    foto: imagesArray,
+                    foto: uploadedImageUrls, // Ora salviamo solo link, il DB pesa pochissimo!
                     stato: "in_attesa",
                     conferme: 1,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // 3. Salvataggio dati PRIVATI usabile per ID
+                // 5. Salvataggio dati PRIVATI usabile per ID (Codice)
                 await db.collection("segnalazioni_private").doc(closureCode).set({
                     reportId: docRef.id,
                     emailUtente: userEmail,
@@ -1022,17 +1020,12 @@
                 
                 localStorage.setItem(`confirmed_${docRef.id}`, 'true');
 
-                lastReportData = {
-                    indirizzo: addressText,
-                    tipo: tipoRifiuto,
-                    descrizione: description,
-                    lat: lockedCoords.lat,
-                    lng: lockedCoords.lng
-                };
+                lastReportData = { indirizzo: addressText, tipo: tipoRifiuto, descrizione: description, lat: lockedCoords.lat, lng: lockedCoords.lng };
 
                 document.getElementById('display-closure-code').innerText = closureCode;
                 document.getElementById('code-modal').style.display = 'flex';
 
+                // Reset Form
                 document.getElementById('address-input').value = '';
                 document.getElementById('email-input').value = '';
                 document.getElementById('tipo-rifiuto-input').value = '';
@@ -1043,28 +1036,22 @@
                 lockedCoords = null;
                 closePanel('report-panel');
                 loadMarkers();
+
             } catch (error) {
-                console.error("Errore durante l'invio o il salvataggio: ", error);
-                showToast("Errore durante l'invio: " + (error.text || error.message || error));
+                console.error("Errore durante l'invio: ", error);
+                showToast("Errore durante l'invio. Verifica la connessione.");
+            } finally {
+                btnInvia.innerText = "Invia Segnalazione";
+                btnInvia.disabled = false;
             }
         }
 
         function openRapMail() {
             if (!lastReportData) return;
-
             const emailDestinatario = "urp@rapspa.it";
             const oggetto = encodeURIComponent(`Segnalazione rifiuti abbandonati: ${lastReportData.tipo} - ${lastReportData.indirizzo}`);
             const googleMapsUrl = `https://www.google.com/maps?q=${lastReportData.lat},${lastReportData.lng}`;
-            
-            const corpo = encodeURIComponent(
-                `Salve,\n\nSegnalo la presenza della seguente criticità ambientale sul territorio comunale:\n\n` +
-                `- Tipologia: ${lastReportData.tipo}\n` +
-                `- Indirizzo / Riferimento: ${lastReportData.indirizzo}\n` +
-                `- Descrizione: ${lastReportData.descrizione || 'Nessuna descrizione aggiuntiva'}\n\n` +
-                `Potete verificare la posizione esatta al seguente link:\n${googleMapsUrl}\n\n` +
-                `Cordiali saluti.`
-            );
-
+            const corpo = encodeURIComponent(`Salve,\n\nSegnalo la presenza della seguente criticità ambientale sul territorio comunale:\n\n- Tipologia: ${lastReportData.tipo}\n- Indirizzo / Riferimento: ${lastReportData.indirizzo}\n- Descrizione: ${lastReportData.descrizione || 'Nessuna descrizione aggiuntiva'}\n\nPotete verificare la posizione esatta al seguente link:\n${googleMapsUrl}\n\nCordiali saluti.`);
             window.location.href = `mailto:${emailDestinatario}?subject=${oggetto}&body=${corpo}`;
         }
     </script>
