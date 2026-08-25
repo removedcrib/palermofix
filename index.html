@@ -46,8 +46,9 @@
             --primary-gradient: linear-gradient(135deg, #ff6b35 0%, #ff8e53 100%);
             --secondary: #00b4d8;
             --success: #2ec4b6;
+            --whatsapp: #25d366;
             --dark: #1d3557; 
-            --glass-bg: rgba(255, 255, 255, 0.92);
+            --glass-bg: rgba(255, 255, 255, 0.94);
             --glass-border: rgba(255, 255, 255, 0.6);
             --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
@@ -128,6 +129,22 @@
         }
         .top-btn:hover { background: white; transform: translateY(-2px); }
 
+        /* Barra filtri a scorrimento orizzontale (Fighissima) */
+        #filter-bar {
+            position: absolute; top: 80px; left: 20px; right: 20px; z-index: 950;
+            display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+            pointer-events: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+        }
+        #filter-bar::-webkit-scrollbar { display: none; }
+        .filter-chip {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); padding: 7px 14px; border-radius: 25px;
+            font-size: 12px; font-weight: 700; color: var(--dark); white-space: nowrap; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+        }
+        .filter-chip:hover { background: white; transform: translateY(-1px); }
+        .filter-chip.active { background: var(--dark); color: white; border-color: var(--dark); }
+
         #welcome-modal { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; 
             background: rgba(29, 53, 87, 0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
@@ -180,6 +197,12 @@
             box-shadow: 0 10px 25px rgba(46, 196, 182, 0.3); 
         }
         .btn-alt:hover { box-shadow: 0 15px 30px rgba(46, 196, 182, 0.4); }
+
+        .btn-whatsapp {
+            background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            box-shadow: 0 10px 25px rgba(37, 211, 102, 0.3);
+        }
+        .btn-whatsapp:hover { box-shadow: 0 15px 30px rgba(37, 211, 102, 0.4); }
 
         .slide-panel { 
             position: fixed; bottom: -100%; left: 0; right: 0; max-width: 480px; margin: 0 auto;
@@ -309,6 +332,18 @@
         </div>
     </div>
 
+    <!-- Barra filtri orizzontale scorrevole -->
+    <div id="filter-bar">
+        <div class="filter-chip active" onclick="setFilter('Tutti', this)">🌐 Tutti</div>
+        <div class="filter-chip" onclick="setFilter('Micro-discarica / Sacchi abbandonati', this)">🔴 Micro-discariche</div>
+        <div class="filter-chip" onclick="setFilter('Cassonetti saturi o traboccanti', this)">🟡 Cassonetti</div>
+        <div class="filter-chip" onclick="setFilter('Cestini gettacarte stradali saturi', this)">🟣 Cestini</div>
+        <div class="filter-chip" onclick="setFilter('Mancato spazzamento / Marciapiedi sporchi', this)">🧹 Spazzamento</div>
+        <div class="filter-chip" onclick="setFilter('Abbandono rifiuti ingombranti', this)">🛋️ Ingombranti</div>
+        <div class="filter-chip" onclick="setFilter('Materiale edile e inerti', this)">🧱 Inerti</div>
+        <div class="filter-chip" onclick="setFilter('Sfalci di potatura e verde', this)">🍃 Sfalci</div>
+    </div>
+
     <div id="welcome-modal">
         <div class="welcome-card">
             <div id="step1" class="step active">
@@ -375,14 +410,15 @@
         <div id="overlay-counter" class="overlay-counter">1 / 1</div>
     </div>
 
-    <!-- Modale di successo con codice e opzione mail RAP -->
+    <!-- Modale di successo con codice, opzione mail RAP e WhatsApp -->
     <div id="code-modal">
         <div class="modal-content">
             <h3>Segnalazione Inviata! 🚀</h3>
             <p style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 5px;">Ti abbiamo inviato un'email con il codice di chiusura. Ecco il codice di riserva:</p>
             <div class="code-box" id="display-closure-code">------</div>
             
-            <button class="btn-main btn-alt" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 10px; font-size: 13px;" onclick="openRapMail()">✉️ Invia segnalazione a RAP (URP)</button>
+            <button class="btn-main btn-alt" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 8px; font-size: 13px;" onclick="openRapMail()">✉️ Invia segnalazione a RAP (URP)</button>
+            <button class="btn-main btn-whatsapp" style="width: 100%; max-width: none; padding: 12px; margin-bottom: 10px; font-size: 13px;" onclick="shareOnWhatsApp()">💬 Condividi su WhatsApp</button>
             
             <button class="btn-main" style="width: 100%; max-width: none; padding: 14px;" onclick="closeCodeModal()">Ho salvato il codice</button>
         </div>
@@ -511,7 +547,6 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <!-- Aggiunto Firebase Storage per l'architettura enterprise -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 
     <script>
@@ -527,6 +562,9 @@
 
         let currentZoomPhotos = [];
         let currentZoomIndex = 0;
+
+        let rawReportsCache = []; // Cache per i filtri istantanei
+        let currentActiveFilter = 'Tutti';
 
         window.addEventListener('DOMContentLoaded', () => {
             if (!localStorage.getItem('palermoFix_intro_visto')) {
@@ -571,13 +609,12 @@
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const storage = firebase.storage(); // Inizializzazione Storage
+        const storage = firebase.storage();
 
         var map = L.map('map', { zoomControl: false }).setView([38.1157, 13.3615], 14);
         L.control.zoom({ position: 'topright' }).addTo(map);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
-        // Inizializzazione del Cluster Group di Leaflet per gestire enormi volumi di segnalazioni
         let markersCluster = L.markerClusterGroup({
             maxClusterRadius: 40,
             iconCreateFunction: function (cluster) {
@@ -660,91 +697,111 @@
         }
 
         function loadMarkers() {
-            markersCluster.clearLayers();
-            // Implementazione protezione limit(1500) per scalare a milioni senza impattare i costi di Firebase
             db.collection("segnalazioni")
               .where("stato", "==", "approvata")
               .limit(1500)
               .get()
               .then((querySnapshot) => {
-                let activeCount = 0;
-                let markersArray = [];
-                
+                rawReportsCache = [];
                 querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    if (data.lat && data.lng) {
-                        activeCount++;
-                        const conferme = data.conferme || 1;
-                        let pinColor = "#ff6b35"; 
-                        switch(data.tipoRifiuto) {
-                            case "Micro-discarica / Sacchi abbandonati": pinColor = "#e63946"; break;
-                            case "Cassonetti saturi o traboccanti": pinColor = "#ffb703"; break;
-                            case "Cestini gettacarte stradali saturi": pinColor = "#7209b7"; break;
-                            case "Mancato spazzamento / Marciapiedi sporchi": pinColor = "#4a4e69"; break;
-                            case "Abbandono rifiuti ingombranti": pinColor = "#8d6e63"; break;
-                            case "Materiale edile e inerti": pinColor = "#d4a373"; break;
-                            case "Sfalci di potatura e verde": pinColor = "#2ec4b6"; break;
-                        }
-
-                        if (conferme >= 5) pinColor = "#900C3F";
-                        const alreadyConfirmed = localStorage.getItem(`confirmed_${doc.id}`) === 'true';
-
-                        let photoHtml = "";
-                        let photoList = [];
-                        if (Array.isArray(data.foto) && data.foto.length > 0) {
-                            photoList = data.foto;
-                        } else if (typeof data.foto === "string" && data.foto.length > 20) {
-                            photoList = [data.foto];
-                        }
-
-                        if (photoList.length > 0) {
-                            const jsonPhotos = JSON.stringify(photoList).replace(/"/g, '&quot;');
-                            photoHtml = `<div class="photo-carousel">`;
-                            photoList.forEach((src, idx) => {
-                                photoHtml += `
-                                    <div class="photo-carousel-item">
-                                        <img src="${src}" onclick="zoomImage(${jsonPhotos}, ${idx})" title="Clicca per ingrandire" loading="lazy">
-                                        ${photoList.length > 1 ? `<span class="photo-badge">${idx + 1}/${photoList.length}</span>` : ''}
-                                    </div>`;
-                            });
-                            photoHtml += `</div>`;
-                        }
-
-                        const content = `
-                            <div class="custom-popup" style="text-align: left;">
-                                <b style="color: ${pinColor};">${data.tipoRifiuto || 'Segnalazione'}</b>
-                                <p style="margin: 4px 0;"><b>Indirizzo:</b> ${data.indirizzoManuale || 'Non specificato'}</p>
-                                <p style="margin: 4px 0;">👥 <b>Segnalazioni/Conferme:</b> ${conferme}</p>
-                                <p style="margin: 4px 0;">${data.descrizione || ''}</p>
-                                ${photoHtml}
-                                <div style="margin-top: 10px; text-align: center;">
-                                    ${alreadyConfirmed 
-                                        ? '<span style="font-size: 11px; color: #2ec4b6; font-weight: 700;">✔️ Hai confermato questo problema</span>' 
-                                        : `<button onclick="openConfirmCaptchaModal('${doc.id}')" style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%;">Conferma Problema (+1)</button>`
-                                    }
-                                </div>
-                            </div>
-                        `;
-
-                        const iconHtml = `
-                            <div style="background-color: ${pinColor}; width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 6px rgba(0,0,0,0.3); border: 2px solid white;">
-                                ${conferme > 1 ? `<span style="transform: rotate(45deg); color: white; font-weight: 800; font-size: 10px;">${conferme}</span>` : '<span style="width: 8px; height: 8px; background: white; border-radius: 50%; transform: rotate(45deg);"></span>'}
-                            </div>
-                        `;
-
-                        const customIcon = L.divIcon({ className: 'custom-pin-marker', html: iconHtml, iconSize: [28, 28], iconAnchor: [14, 28] });
-                        
-                        const marker = L.marker([data.lat, data.lng], { icon: customIcon }).bindPopup(content);
-                        markersArray.push(marker);
-                    }
+                    rawReportsCache.push({ id: doc.id, ...doc.data() });
                 });
-                
-                markersCluster.addLayers(markersArray); // Aggiunge tutti i pin nel sistema cluster
-                document.getElementById('active-count-badge').innerText = activeCount + (activeCount === 1 ? ' attiva' : ' attive');
+                renderFilteredMarkers();
             }).catch((error) => {
                 console.error("Errore nel caricamento: ", error);
                 document.getElementById('active-count-badge').innerText = 'Errore';
             });
+        }
+
+        function setFilter(filterType, element) {
+            currentActiveFilter = filterType;
+            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            element.classList.add('active');
+            renderFilteredMarkers();
+        }
+
+        function renderFilteredMarkers() {
+            markersCluster.clearLayers();
+            let activeCount = 0;
+            let markersArray = [];
+
+            rawReportsCache.forEach((data) => {
+                if (currentActiveFilter !== 'Tutti' && data.tipoRifiuto !== currentActiveFilter) {
+                    return; // Salta i marker che non corrispondono al filtro
+                }
+
+                if (data.lat && data.lng) {
+                    activeCount++;
+                    const conferme = data.conferme || 1;
+                    let pinColor = "#ff6b35"; 
+                    switch(data.tipoRifiuto) {
+                        case "Micro-discarica / Sacchi abbandonati": pinColor = "#e63946"; break;
+                        case "Cassonetti saturi o traboccanti": pinColor = "#ffb703"; break;
+                        case "Cestini gettacarte stradali saturi": pinColor = "#7209b7"; break;
+                        case "Mancato spazzamento / Marciapiedi sporchi": pinColor = "#4a4e69"; break;
+                        case "Abbandono rifiuti ingombranti": pinColor = "#8d6e63"; break;
+                        case "Materiale edile e inerti": pinColor = "#d4a373"; break;
+                        case "Sfalci di potatura e verde": pinColor = "#2ec4b6"; break;
+                    }
+
+                    if (conferme >= 5) pinColor = "#900C3F";
+                    const alreadyConfirmed = localStorage.getItem(`confirmed_${data.id}`) === 'true';
+
+                    let photoHtml = "";
+                    let photoList = [];
+                    if (Array.isArray(data.foto) && data.foto.length > 0) {
+                        photoList = data.foto;
+                    } else if (typeof data.foto === "string" && data.foto.length > 20) {
+                        photoList = [data.foto];
+                    }
+
+                    if (photoList.length > 0) {
+                        const jsonPhotos = JSON.stringify(photoList).replace(/"/g, '&quot;');
+                        photoHtml = `<div class="photo-carousel">`;
+                        photoList.forEach((src, idx) => {
+                            photoHtml += `
+                                <div class="photo-carousel-item">
+                                    <img src="${src}" onclick="zoomImage(${jsonPhotos}, ${idx})" title="Clicca per ingrandire" loading="lazy">
+                                    ${photoList.length > 1 ? `<span class="photo-badge">${idx + 1}/${photoList.length}</span>` : ''}
+                                </div>`;
+                        });
+                        photoHtml += `</div>`;
+                    }
+
+                    // Pulsante WhatsApp all'interno del Popup della Mappa
+                    const encodedWaMsg = encodeURIComponent(`Segnalazione Palermo Fix 🚮\nTipo: ${data.tipoRifiuto}\nIndirizzo: ${data.indirizzoManuale}\nGuarda la mappa o conferma il problema: ${window.location.origin}${window.location.pathname}`);
+
+                    const content = `
+                        <div class="custom-popup" style="text-align: left;">
+                            <b style="color: ${pinColor};">${data.tipoRifiuto || 'Segnalazione'}</b>
+                            <p style="margin: 4px 0;"><b>Indirizzo:</b> ${data.indirizzoManuale || 'Non specificato'}</p>
+                            <p style="margin: 4px 0;">👥 <b>Conferme:</b> ${conferme}</p>
+                            <p style="margin: 4px 0;">${data.descrizione || ''}</p>
+                            ${photoHtml}
+                            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+                                ${alreadyConfirmed 
+                                    ? '<span style="font-size: 11px; color: #2ec4b6; font-weight: 700; text-align: center;">✔️ Hai confermato questo problema</span>' 
+                                    : `<button onclick="openConfirmCaptchaModal('${data.id}')" style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%;">Conferma Problema (+1)</button>`
+                                }
+                                <a href="https://api.whatsapp.com/send?text=${encodedWaMsg}" target="_blank" style="background: #25d366; color: white; text-decoration: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; text-align: center; display: block;">💬 Condividi su WhatsApp</a>
+                            </div>
+                        </div>
+                    `;
+
+                    const iconHtml = `
+                        <div style="background-color: ${pinColor}; width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 6px rgba(0,0,0,0.3); border: 2px solid white;">
+                            ${conferme > 1 ? `<span style="transform: rotate(45deg); color: white; font-weight: 800; font-size: 10px;">${conferme}</span>` : '<span style="width: 8px; height: 8px; background: white; border-radius: 50%; transform: rotate(45deg);"></span>'}
+                        </div>
+                    `;
+
+                    const customIcon = L.divIcon({ className: 'custom-pin-marker', html: iconHtml, iconSize: [28, 28], iconAnchor: [14, 28] });
+                    const marker = L.marker([data.lat, data.lng], { icon: customIcon }).bindPopup(content);
+                    markersArray.push(marker);
+                }
+            });
+
+            markersCluster.addLayers(markersArray);
+            document.getElementById('active-count-badge').innerText = activeCount + (activeCount === 1 ? ' attiva' : ' attive');
         }
 
         loadMarkers();
@@ -809,10 +866,30 @@
             try {
                 const docSnap = await db.collection("segnalazioni_private").doc(inputCode).get();
                 if (!docSnap.exists) { showToast("Codice non valido."); return; }
-                const reportId = docSnap.data().reportId;
-                await db.collection("segnalazioni").doc(reportId).update({ stato: "chiusa" });
+                const privateData = docSnap.data();
+                const reportId = privateData.reportId;
+
+                const reportRef = db.collection("segnalazioni").doc(reportId);
+                const reportSnap = await reportRef.get();
+
+                if (reportSnap.exists) {
+                    const reportData = reportSnap.data();
+                    if (reportData.foto && Array.isArray(reportData.foto)) {
+                        for (let fotoUrl of reportData.foto) {
+                            try {
+                                const imageRef = storage.refFromURL(fotoUrl);
+                                await imageRef.delete();
+                            } catch (storageErr) {
+                                console.warn("Immagine già rimossa o non trovata:", storageErr);
+                            }
+                        }
+                    }
+                }
+
+                await reportRef.update({ stato: "chiusa", foto: [] });
+                await db.collection("segnalazioni_private").doc(inputCode).delete();
                 
-                showToast("Segnalazione risolta con successo!");
+                showToast("Segnalazione risolta e archiviata con successo!");
                 document.getElementById('closure-code-input').value = '';
                 closePanel('close-panel');
                 setTimeout(() => { loadMarkers(); }, 500);
@@ -917,7 +994,7 @@
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800; // Aumentato un po' la qualità per Firebase Storage
+                        const MAX_WIDTH = 800;
                         const scaleSize = MAX_WIDTH / img.width;
                         canvas.width = scaleSize < 1 ? MAX_WIDTH : img.width;
                         canvas.height = scaleSize < 1 ? img.height * scaleSize : img.height;
@@ -933,7 +1010,6 @@
             });
         }
 
-        // Helper per convertire Base64 in Blob per l'upload su Firebase Storage
         function dataURLToBlob(dataURL) {
             const parts = dataURL.split(';base64,');
             const contentType = parts[0].split(':')[1];
@@ -970,10 +1046,7 @@
             const closureCode = generateCode();
             
             try {
-                // 1. Creiamo subito il riferimento al documento per avere l'ID ufficiale per lo Storage
                 const docRef = db.collection("segnalazioni").doc();
-
-                // 2. Upload Immagini su Firebase Storage (Enterprise Level)
                 const imageInput = document.getElementById('image-input');
                 let uploadedImageUrls = [];
 
@@ -983,7 +1056,6 @@
                         const base64Img = await compressImage(filesToProcess[i]);
                         if (base64Img) {
                             const blob = dataURLToBlob(base64Img);
-                            // Percorso in Storage: foto_segnalazioni/{id_report}/foto_{indice}.jpg
                             const fileRef = storage.ref(`foto_segnalazioni/${docRef.id}/foto_${i}.jpg`);
                             await fileRef.put(blob);
                             const downloadUrl = await fileRef.getDownloadURL();
@@ -992,26 +1064,23 @@
                     }
                 }
 
-                // 3. Invio email via EmailJS (Solo Testo)
                 await emailjs.send("service_00o5cml", "template_0sfzma5", {
                     to_email: userEmail, user_email: userEmail, codice_chiusura: closureCode,
                     tipo_rifiuto: tipoRifiuto, indirizzo: addressText, descrizione: description || 'Nessuna descrizione'
                 });
 
-                // 4. Salvataggio su Firestore con le sole URL leggere
                 await docRef.set({
                     indirizzoManuale: addressText,
                     tipoRifiuto: tipoRifiuto,
                     lat: lockedCoords.lat,
                     lng: lockedCoords.lng,
                     descrizione: description,
-                    foto: uploadedImageUrls, // Ora salviamo solo link, il DB pesa pochissimo!
+                    foto: uploadedImageUrls,
                     stato: "in_attesa",
                     conferme: 1,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // 5. Salvataggio dati PRIVATI usabile per ID (Codice)
                 await db.collection("segnalazioni_private").doc(closureCode).set({
                     reportId: docRef.id,
                     emailUtente: userEmail,
@@ -1019,13 +1088,11 @@
                 });
                 
                 localStorage.setItem(`confirmed_${docRef.id}`, 'true');
-
                 lastReportData = { indirizzo: addressText, tipo: tipoRifiuto, descrizione: description, lat: lockedCoords.lat, lng: lockedCoords.lng };
 
                 document.getElementById('display-closure-code').innerText = closureCode;
                 document.getElementById('code-modal').style.display = 'flex';
 
-                // Reset Form
                 document.getElementById('address-input').value = '';
                 document.getElementById('email-input').value = '';
                 document.getElementById('tipo-rifiuto-input').value = '';
@@ -1053,6 +1120,12 @@
             const googleMapsUrl = `https://www.google.com/maps?q=${lastReportData.lat},${lastReportData.lng}`;
             const corpo = encodeURIComponent(`Salve,\n\nSegnalo la presenza della seguente criticità ambientale sul territorio comunale:\n\n- Tipologia: ${lastReportData.tipo}\n- Indirizzo / Riferimento: ${lastReportData.indirizzo}\n- Descrizione: ${lastReportData.descrizione || 'Nessuna descrizione aggiuntiva'}\n\nPotete verificare la posizione esatta al seguente link:\n${googleMapsUrl}\n\nCordiali saluti.`);
             window.location.href = `mailto:${emailDestinatario}?subject=${oggetto}&body=${corpo}`;
+        }
+
+        function shareOnWhatsApp() {
+            if (!lastReportData) return;
+            const waText = encodeURIComponent(`Ho appena segnalato un problema su Palermo Fix 🚮\n\n- Tipo: ${lastReportData.tipo}\n- Indirizzo: ${lastReportData.indirizzo}\n\nAiutaci a mantenere pulita la città, guarda la mappa o conferma il problema: ${window.location.origin}${window.location.pathname}`);
+            window.open(`https://api.whatsapp.com/send?text=${waText}`, '_blank');
         }
     </script>
 </body>
