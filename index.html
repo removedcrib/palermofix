@@ -181,6 +181,17 @@
         .step-dot.active { background: var(--primary); width: 24px; border-radius: 4px; }
         .welcome-actions { display: flex; flex-direction: column; gap: 10px; }
 
+        /* Pulsante GPS fluttuante in basso a destra */
+        #gps-fab {
+            position: absolute; bottom: 135px; right: 20px; z-index: 1000;
+            background: var(--glass-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--glass-border); width: 48px; height: 48px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--dark);
+            font-size: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.12); transition: all 0.2s;
+            pointer-events: auto;
+        }
+        #gps-fab:hover { background: white; transform: translateY(-2px); }
+
         #ui-overlay { 
             position: absolute; bottom: 20px; left: 0; right: 0; z-index: 1000; 
             padding: 0 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; 
@@ -447,6 +458,9 @@
             <button class="btn-main" style="width: 100%; max-width: none; padding: 14px;" onclick="closeCodeModal()">Ho salvato il codice</button>
         </div>
     </div>
+
+    <!-- Pulsante rapido di geolocalizzazione in basso a destra -->
+    <button id="gps-fab" onclick="panToUserLocation()" title="Centra sulla mia posizione">📍</button>
 
     <div id="ui-overlay">
         <button class="btn-main" onclick="startPinSelection()">✨ Nuova Segnalazione Rifiuti</button>
@@ -865,6 +879,23 @@
         }
 
         loadMarkers();
+
+        // Funzione per centrare liberamente la mappa sulla posizione GPS dell'utente
+        function panToUserLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        map.setView([pos.coords.latitude, pos.coords.longitude], 17);
+                        showToast("Mappa centrata sulla tua posizione!");
+                    },
+                    err => {
+                        showToast("Impossibile recuperare la posizione GPS.");
+                    }
+                );
+            } else {
+                showToast("Geolocalizzazione non supportata dal browser.");
+            }
+        }
 
         function openConfirmCaptchaModal(docId) {
             if (localStorage.getItem(`confirmed_${docId}`) === 'true') { showToast("Hai già confermato questa segnalazione."); return; }
