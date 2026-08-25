@@ -163,7 +163,7 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnv3E",
+            apiKey: "AIzaSyBK-a10-vtAoJRsKULptXnauRVK8NTnV3E",
             authDomain: "palermofix-9cae9.firebaseapp.com",
             projectId: "palermofix-9cae9",
             storageBucket: "palermofix-9cae9.firebasestorage.app",
@@ -174,7 +174,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const auth = firebase.auth();
-        const storage = firebase.storage(); // Inizializzazione Storage per la pulizia dei file
+        const storage = firebase.storage();
 
         function showToast(msg) {
             const t = document.getElementById('toast');
@@ -211,11 +211,11 @@
             auth.signOut().catch(e => console.error(e));
         }
 
-        // Funzione helper per renderizzare le foto (singola o fino a 3)
+        // Funzione helper aggiornata per estrarre l'URL sia dai nuovi oggetti che dalle vecchie stringhe
         function renderPhotoGalleryHtml(fotoData) {
             let photos = [];
             if (Array.isArray(fotoData)) {
-                photos = fotoData.filter(src => src && src.length > 20);
+                photos = fotoData.map(f => (typeof f === 'object' && f !== null ? f.url : f)).filter(src => src && src.length > 20);
             } else if (typeof fotoData === "string" && fotoData.length > 20) {
                 photos = [fotoData];
             }
@@ -361,22 +361,24 @@
             }
         }
 
-        // Funzione di eliminazione avanzata: rimuove il record dal DB e pulisce le foto da Storage
+        // Funzione di eliminazione aggiornata per gestire correttamente il nuovo path dello Storage
         async function deleteReport(publicId, codeDocId) {
             if (confirm("Sei sicuro di voler eliminare definitivamente questo documento e le relative foto dal cloud? L'azione è irreversibile.")) {
                 try {
-                    // 1. Recuperiamo il documento prima di eliminarlo per leggere i link delle foto
                     const docRef = db.collection("segnalazioni").doc(publicId);
                     const docSnap = await docRef.get();
 
                     if (docSnap.exists) {
                         const data = docSnap.data();
-                        // 2. Pulizia foto da Firebase Storage
                         if (data.foto && Array.isArray(data.foto)) {
-                            for (let fotoUrl of data.foto) {
+                            for (let fotoObj of data.foto) {
                                 try {
-                                    const imageRef = storage.refFromURL(fotoUrl);
-                                    await imageRef.delete();
+                                    const targetPath = (typeof fotoObj === 'object' && fotoObj !== null && fotoObj.path) ? fotoObj.path : null;
+                                    if (targetPath) {
+                                        await storage.ref(targetPath).delete();
+                                    } else if (typeof fotoObj === 'string') {
+                                        await storage.refFromURL(fotoObj).delete();
+                                    }
                                 } catch (storageErr) {
                                     console.warn("Impossibile trovare il file nello storage o già eliminato:", storageErr);
                                 }
@@ -384,7 +386,6 @@
                         }
                     }
 
-                    // 3. Eliminazione dei documenti da Firestore (pubblico e privato)
                     const promises = [docRef.delete()];
                     if (codeDocId) {
                         promises.push(db.collection("segnalazioni_private").doc(codeDocId).delete().catch(() => {}));
