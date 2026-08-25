@@ -211,11 +211,18 @@
             auth.signOut().catch(e => console.error(e));
         }
 
-        // Funzione helper aggiornata per estrarre l'URL sia dai nuovi oggetti che dalle vecchie stringhe
+        // Funzione helper aggiornata per estrarre l'URL sia dai nuovi oggetti strutturati che dalle vecchie stringhe
         function renderPhotoGalleryHtml(fotoData) {
             let photos = [];
             if (Array.isArray(fotoData)) {
-                photos = fotoData.map(f => (typeof f === 'object' && f !== null ? f.url : f)).filter(src => src && src.length > 20);
+                photos = fotoData.map(f => {
+                    if (!f) return null;
+                    if (typeof f === 'string' && f.length > 20) return f;
+                    if (typeof f === 'object') {
+                        return f.url || f.downloadURL || f.path || null;
+                    }
+                    return null;
+                }).filter(src => src && typeof src === 'string' && src.length > 20);
             } else if (typeof fotoData === "string" && fotoData.length > 20) {
                 photos = [fotoData];
             }
@@ -361,7 +368,6 @@
             }
         }
 
-        // Funzione di eliminazione aggiornata per gestire correttamente il nuovo path dello Storage
         async function deleteReport(publicId, codeDocId) {
             if (confirm("Sei sicuro di voler eliminare definitivamente questo documento e le relative foto dal cloud? L'azione è irreversibile.")) {
                 try {
