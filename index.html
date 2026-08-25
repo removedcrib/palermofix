@@ -808,7 +808,8 @@
                     let photoHtml = "";
                     let photoList = [];
                     if (Array.isArray(data.foto) && data.foto.length > 0) {
-                        photoList = data.foto;
+                        // Estraiamo l'URL sia che i dati siano oggetti strutturati che vecchie stringhe
+                        photoList = data.foto.map(f => (typeof f === 'object' && f !== null ? f.url : f));
                     } else if (typeof data.foto === "string" && data.foto.length > 20) {
                         photoList = [data.foto];
                     }
@@ -918,7 +919,7 @@
             }
         }
 
-        // Funzione di chiusura protetta e blindata
+        // Funzione di chiusura protetta e pulizia Storage sicura al 100%
         async function resolveReportByCode() {
             const inputCode = document.getElementById('closure-code-input').value.trim().toUpperCase();
             if (!inputCode) { showToast("Inserisci un codice valido."); return; }
@@ -935,12 +936,16 @@
                 if (reportSnap.exists) {
                     const reportData = reportSnap.data();
                     if (reportData.foto && Array.isArray(reportData.foto)) {
-                        for (let fotoUrl of reportData.foto) {
+                        for (let fotoObj of reportData.foto) {
                             try {
-                                const imageRef = storage.refFromURL(fotoUrl);
-                                await imageRef.delete();
+                                const targetPath = (typeof fotoObj === 'object' && fotoObj !== null && fotoObj.path) ? fotoObj.path : null;
+                                if (targetPath) {
+                                    await storage.ref(targetPath).delete();
+                                } else if (typeof fotoObj === 'string') {
+                                    await storage.refFromURL(fotoObj).delete();
+                                }
                             } catch (storageErr) {
-                                console.warn("Immagine non trovata nel cloud, procediamo comunque:", storageErr);
+                                console.warn("Impossibile eliminare il file dallo storage:", storageErr);
                             }
                         }
                     }
@@ -1108,7 +1113,7 @@
             try {
                 const docRef = db.collection("segnalazioni").doc();
                 const imageInput = document.getElementById('image-input');
-                let uploadedImageUrls = [];
+                let uploadedPhotosData = [];
 
                 if (imageInput.files && imageInput.files.length > 0) {
                     const filesToProcess = Array.from(imageInput.files).slice(0, 3);
@@ -1116,10 +1121,14 @@
                         const base64Img = await compressImage(filesToProcess[i]);
                         if (base64Img) {
                             const blob = dataURLToBlob(base64Img);
-                            const fileRef = storage.ref(`foto_segnalazioni/${docRef.id}/foto_${i}.jpg`);
+                            const storagePath = `foto_segnalazioni/${docRef.id}/foto_${i}.jpg`;
+                            const fileRef = storage.ref(storagePath);
+                            
                             await fileRef.put(blob);
                             const downloadUrl = await fileRef.getDownloadURL();
-                            uploadedImageUrls.push(downloadUrl);
+                            
+                            // Salviamo sia l'URL pubblico che il path di storage per la cancellazione sicura
+                            uploadedPhotosData.push({ url: downloadUrl, path: storagePath });
                         }
                     }
                 }
@@ -1135,7 +1144,7 @@
                     lat: lockedCoords.lat,
                     lng: lockedCoords.lng,
                     descrizione: description,
-                    foto: uploadedImageUrls,
+                    foto: uploadedPhotosData,
                     stato: "in_attesa",
                     conferme: 1,
                     dataCreazione: firebase.firestore.FieldValue.serverTimestamp()
