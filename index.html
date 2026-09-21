@@ -1056,6 +1056,16 @@
 
         async function checkProximityAndProceed() {
             const center = map.getCenter();
+
+            // 📍 Delimitazione dei confini geografici di Palermo
+            const minLat = 38.050, maxLat = 38.250;
+            const minLng = 13.250, maxLng = 13.550;
+
+            if (center.lat < minLat || center.lat > maxLat || center.lng < minLng || center.lng > maxLng) {
+                showToast("⚠️ Puoi effettuare segnalazioni solo all'interno del comune di Palermo!");
+                return; // Blocca il flusso se fuori zona
+            }
+
             lockedCoords = { lat: center.lat, lng: center.lng };
 
             try {
